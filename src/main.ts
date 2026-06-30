@@ -99,7 +99,9 @@ class Gallery {
 		if (files.length > 0){
 			VideoFiles.forEach((video, index) => {
 			const video_card = div.createDiv(
-				{ cls: 'video-card' },
+				{ cls: 'video-card', attr:{
+					"data-path": video.path,
+				} },
 				(videocard) => {
 					videocard.createEl('video', {
 						attr: {
@@ -107,6 +109,7 @@ class Gallery {
 							controls: 'true',
 							muted: 'true',
 							preload: 'auto',
+							
 						},
 					});
 
@@ -114,9 +117,12 @@ class Gallery {
 						const name = VideoFiles[index]?.basename;
 
 						videoinfo.createEl('p', { text: name });
+						
 					});
+					
 				},
 			);
+			
 		});
 		}
 		else
@@ -124,7 +130,36 @@ class Gallery {
 			div.createEl('p', {text: "File not found"})
 			
 		}
-		
+		div.addEventListener('dblclick', (event: MouseEvent) =>{
+			const objetivo = event.target as HTMLElement;
+			if (objetivo.tagName === 'VIDEO') {
+        return;
+    }
+
+    const tarjetaVideo = objetivo.closest('.video-card') as HTMLElement | null;
+
+    if (tarjetaVideo !== null) {
+        // 1. Intentamos obtener el data-path primero
+        let rutaArchivo: string | null = tarjetaVideo.getAttribute('data-path');
+
+        // 2. FALLBACK: Si no existe el atributo, lo extraemos dinámicamente del texto del <p>
+        if (!rutaArchivo) {
+            const parrafoTitulo = tarjetaVideo.querySelector('.video-info p');
+            if (parrafoTitulo && parrafoTitulo.textContent) {
+                // Si el texto es "Chica_t", construimos una ruta estimada o el nombre del archivo
+                // Nota: Asegúrate de mapear esto a cómo almacenas tus archivos en el Vault
+                rutaArchivo = `references/video/${parrafoTitulo.textContent.trim()}.mp4`;
+            }
+        }
+
+        // 3. Validación y ejecución segura
+        if (rutaArchivo && rutaArchivo.trim() !== "") {
+            this._app.workspace.openLinkText(rutaArchivo, "", true);
+        } else {
+            console.warn("No se pudo determinar ninguna ruta para este elemento.");
+        }
+    }
+		})
 		
 	}
 }

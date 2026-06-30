@@ -12,6 +12,7 @@
 	},
 	"keywords": [],
 	"license": "0-BSD",
+	"packageManager": "pnpm@11.9.0",
 	"devDependencies": {
 		"@eslint/js": "^9.39.4",
 		"@types/node": "^22.15.17",

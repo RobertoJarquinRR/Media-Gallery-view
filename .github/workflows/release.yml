@@ -1,8 +1,10 @@
 name: Release Obsidian plugin
+
 on:
     push:
         tags:
             - '*'
+
 jobs:
     build:
         runs-on: ubuntu-latest
@@ -10,35 +12,29 @@ jobs:
             contents: write
             id-token: write
             attestations: write
+
         steps:
             - uses: actions/checkout@v6
 
-            # Concepto: Instalar pnpm primero activando su abstracción nativa de caché para evitar comandos de store manuales
-            - name: Install pnpm
-              uses: pnpm/action-setup@v4
-              with:
-                  version: 9
-                  cache: true # Reemplaza por completo a actions/cache y pnpm store path
-
-            # Componente: Configurar la versión del runtime de Node.js de manera limpia
             - name: Use Node.js
               uses: actions/setup-node@v6
               with:
                   node-version: 24
+                  cache: 'pnpm'
 
-            # Función: Instalación determinista y compilación de artefactos
+            - name: Enable Corepack
+              run: corepack enable
+
             - name: Build plugin
               run: |
                   pnpm install --frozen-lockfile
                   pnpm run build
 
-            # Evaluación: Verificar si existe el archivo css opcional
             - name: Check for optional styles
               id: styles
               run: |
                   [ -f styles.css ] && echo "exists=true" >> "$GITHUB_OUTPUT" || echo "exists=false" >> "$GITHUB_OUTPUT"
 
-            # Componente: Atestación de seguridad sobre los archivos resultantes
             - name: Attest build provenance
               uses: actions/attest@v4
               with:
@@ -46,12 +42,12 @@ jobs:
                       main.js
                       ${{ steps.styles.outputs.exists == 'true' && 'styles.css' || '' }}
 
-            # Función: Publicación automatizada del borrador del Release con sus assets correspondientes
             - name: Create release
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   tag="${GITHUB_REF#refs/tags/}"
+
                   gh release create "$tag" \
                     --title="$tag" \
                     --draft \
