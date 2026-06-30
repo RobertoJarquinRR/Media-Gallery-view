@@ -3,8 +3,8 @@
 	"name": "Media Gallery view",
 	"version": "0.1.0",
 	"minAppVersion": "1.0.0",
-	"description": "Make a gallery of your videos and images",
+	"description": "Make a gallery of your videos, images and more.",
 	"author": "RobertoJarquinRR",
-	"authorUrl": "https://github.com/rtnwe",
+	"authorUrl": "https://github.com/RobertoJarquinRR",
 	"isDesktopOnly": false
 }
