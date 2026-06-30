@@ -1,7 +1,7 @@
 {
 	"id": "Media-Gallery",
 	"name": "Media Gallery",
-	"version": "1.0.0",
+	"version": "0.1.0",
 	"minAppVersion": "1.0.0",
 	"description": "Make a gallery of your videos and images",
 	"author": "Roberto José Jarquín Romero",
