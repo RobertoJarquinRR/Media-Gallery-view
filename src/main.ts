@@ -6,6 +6,8 @@ import {
 	Notice,
 	Plugin,
 	TFile,
+	App,
+	normalizePath,
 } from 'obsidian';
 
 import {
@@ -82,3 +84,15 @@ export default class MediaGallery extends Plugin {
 	}
 }
 
+function GetPath(Source: string): string {
+	if (Source === undefined) {
+		return 'Write a path';
+	}
+	const result = Source.split(',')
+		.map((p) => p.trim().toLocaleLowerCase())
+		.find((p) => p.startsWith('path:'))
+		?.replace('path:', '')
+		.trim();
+
+	return normalizePath(result ?? 'Write a path');
+}
