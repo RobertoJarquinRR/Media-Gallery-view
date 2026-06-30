@@ -13,30 +13,48 @@ jobs:
         steps:
             - uses: actions/checkout@v6
 
-            # 1. Componente: Inyectar la CLI de pnpm antes de configurar Node.js
-            - name: Install pnpm
-              uses: pnpm/action-setup@v4
-              with:
-                  version: 9 # Mantiene la versión estable actual de pnpm
-
-            # 2. Componente: Configurar Node con la estrategia de caché para pnpm
+            # Concepto: Configurar primero Node de forma aislada para inicializar el entorno de ejecución sin interceptar la caché
             - name: Use Node.js
               uses: actions/setup-node@v6
               with:
                   node-version: 24
-                  cache: 'pnpm' # Busca de manera estricta el archivo pnpm-lock.yaml
 
-            # 3. Función: Construcción del entorno con comandos de pnpm
+            # Componente: Cargar la CLI global de pnpm una vez que la versión de Node está establecida
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 9
+
+            # Función: Extraer explícitamente el directorio del store global de pnpm en el sistema operativo virtual
+            - name: Get pnpm store directory
+              shell: bash
+              id: pnpm-cache
+              run: |
+                  echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+            # Componente: Manejar la persistencia de la caché mediante el módulo dedicado de GitHub Actions
+            # Sintaxis: Usamos el ID del paso previo para mapear la ruta exacta de almacenamiento
+            - name: Setup pnpm cache
+              uses: actions/cache@v4
+              with:
+                  path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+                  key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+                  restore-keys: |
+                      ${{ runner.os }}-pnpm-store-
+
+            # Función: Instalación determinista y compilación del entorno de producción
             - name: Build plugin
               run: |
-                  pnpm install --frozen-lockfile # Equivalente estricto a npm ci
+                  pnpm install --frozen-lockfile 
                   pnpm run build
 
+            # Evaluación: Validar la existencia de la hoja de estilos opcional del plugin de Obsidian
             - name: Check for optional styles
               id: styles
               run: |
                   [ -f styles.css ] && echo "exists=true" >> "$GITHUB_OUTPUT" || echo "exists=false" >> "$GITHUB_OUTPUT"
 
+            # Componente: Atestación criptográfica de la procedencia del binario generado (Provenance)
             - name: Attest build provenance
               uses: actions/attest@v4
               with:
@@ -44,11 +62,13 @@ jobs:
                       main.js
                       ${{ steps.styles.outputs.exists == 'true' && 'styles.css' || '' }}
 
+            # Función: Generación del Release en el repositorio inyectando las constantes y variables dinámicas del tag
             - name: Create release
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   tag="${GITHUB_REF#refs/tags/}"
                   gh release create "$tag" \
-                    --title="$tag" \                    --draft \
+                    --title="$tag" \
+                    --draft \
                     main.js manifest.json ${{ steps.styles.outputs.exists == 'true' && 'styles.css' || '' }}
