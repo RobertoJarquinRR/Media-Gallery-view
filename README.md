@@ -5,7 +5,7 @@
 > **The plugin for now only supports video galleries**
 
 ## Roadmap
-- [*] video support
+- [x] video support
 - [ ] Image support
 - [ ] Audio support
 - [ ] Books support
