@@ -13,25 +13,41 @@ jobs:
         strategy:
             matrix:
                 node-version: [20.x, 22.x, 24.x]
-                # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
 
         steps:
             - uses: actions/checkout@v6
 
-            # 1. Componente: Inyectar la CLI de pnpm antes de la matriz de Node.js
-            - name: Install pnpm
-              uses: pnpm/action-setup@v4
-              with:
-                  version: 9
-
-            # 2. Componente: Configurar Node dinámicamente con soporte de caché para pnpm
+            # 1. Componente: Configurar primero Node de forma limpia (Sin la directiva 'cache')
             - name: Use Node.js ${{ matrix.node-version }}
               uses: actions/setup-node@v6
               with:
                   node-version: ${{ matrix.node-version }}
-                  cache: 'pnpm' # Mapea el hash basándose en pnpm-lock.yaml
 
-            # 3. Funciones: Comandos de ejecución nativos de pnpm
+            # 2. Componente: Inyectar pnpm y activar su caché nativa integrada
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 9
+                  # Sintaxis clave: Delegamos el manejo de la caché directamente a pnpm
+                  run_install: false # Evita que instale antes de tiempo
+
+            # 3. Función: Obtener la ruta del almacén de pnpm para la caché oficial de GitHub
+            - name: Get pnpm store directory
+              shell: bash
+              id: pnpm-cache
+              run: |
+                  echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+            # 4. Componente: Almacenamiento persistente
+            - name: Setup pnpm cache
+              uses: actions/cache@v4
+              with:
+                  path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+                  key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+                  restore-keys: |
+                      ${{ runner.os }}-pnpm-store-
+
+            # 5. Funciones: Compilación y análisis de calidad
             - run: pnpm install --frozen-lockfile
             - run: pnpm run build --if-present
             - run: pnpm run lint
