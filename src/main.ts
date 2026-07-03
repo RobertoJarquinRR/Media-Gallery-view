@@ -28,7 +28,7 @@ export default class MediaGallery extends Plugin {
 				);
 
 				gallery.VideoGallery();
-				
+
 			},
 		);
 
@@ -73,7 +73,7 @@ class Gallery {
 		this._app = app;
 	}
 
-	public VideoGallery(){
+	public VideoGallery() {
 		let VideoExtensions = ['mp4', 'webm', 'ogv', 'mov'];
 
 		const div = this._container.createDiv();
@@ -87,47 +87,48 @@ class Gallery {
 			VideoExtensions.includes(video.extension),
 		);
 
-		if (files.length > 0){
+		if (files.length > 0) {
 			VideoFiles.forEach((video, index) => {
-			div.createDiv(
-				{ cls: 'video-card', attr:{
-					"data-path": video.path,
-				} },
-				(videocard) => {
-					videocard.createEl('video', {
-						attr: {
-							src: this._app.vault.getResourcePath(video),
-							controls: 'true',
-							muted: 'true',
-							preload: 'auto',
-							
-						},
-					});
+				div.createDiv(
+					{
+						cls: 'video-card', attr: {
+							"data-path": video.path,
+						}
+					},
+					(videocard) => {
+						videocard.createEl('video', {
+							attr: {
+								src: this._app.vault.getResourcePath(video),
+								controls: 'true',
+								muted: 'true',
+								preload: 'auto',
 
-					videocard.createDiv({ cls: 'video-info' }, (videoinfo) => {
-						const name = VideoFiles[index]?.basename;
+							},
+						});
 
-						videoinfo.createEl('p', { text: name });
-						
-					});
-					
-				},
-			);
-			
-		});
+						videocard.createDiv({ cls: 'video-info' }, (videoinfo) => {
+							const name = VideoFiles[index]?.basename;
+
+							videoinfo.createEl('p', { text: name });
+
+						});
+
+					},
+				);
+
+			});
 		}
-		else
-		{
-			div.createEl('p', {text: "File not found"})
-			
+		else {
+			div.createEl('p', { text: "File not found" })
+
 		}
-		div.addEventListener('dblclick', (event: MouseEvent) =>{
+		div.addEventListener('dblclick', (event: MouseEvent) => {
 			const target = event.target as HTMLElement;
 			if (target.tagName === 'VIDEO') {
-        return;
-    }
+				return;
+			}
 
-   const videoCard = target.closest('.video-card');
+			const videoCard = target.closest('.video-card');
 
 			if (videoCard !== null) {
 				let filePath: string | null = videoCard.getAttribute('data-path');
