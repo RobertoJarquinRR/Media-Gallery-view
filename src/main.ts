@@ -122,32 +122,33 @@ class Gallery {
 			
 		}
 		div.addEventListener('dblclick', (event: MouseEvent) =>{
-			const objetivo = event.target as HTMLElement;
-			if (objetivo.tagName === 'VIDEO') {
+			const target = event.target as HTMLElement;
+			if (target.tagName === 'VIDEO') {
         return;
     }
 
-    const tarjetaVideo = objetivo.closest('.video-card')
+   const videoCard = target.closest('.video-card');
 
-    if (tarjetaVideo !== null) {
-        let rutaArchivo: string | null = tarjetaVideo.getAttribute('data-path');
+			if (videoCard !== null) {
+				let filePath: string | null = videoCard.getAttribute('data-path');
 
-        if (!rutaArchivo) {
-            const parrafoTitulo = tarjetaVideo.querySelector('.video-info p');
-            if (parrafoTitulo && parrafoTitulo.textContent) {
-                rutaArchivo = `references/video/${parrafoTitulo.textContent.trim()}.mp4`;
-            }
-        }
-        if (rutaArchivo && rutaArchivo.trim() !== "") {
-            void this._app.workspace.openLinkText(rutaArchivo, "", true);
-        } else {
-            console.warn("No se pudo determinar ninguna ruta para este elemento.");
-        }
-    }
-		})
-		
+				if (!filePath) {
+					const titleParagraph = videoCard.querySelector('.video-info p');
+					if (titleParagraph && titleParagraph.textContent) {
+						filePath = `${titleParagraph.textContent.trim()}.mp4`;
+					}
+				}
+
+				if (filePath && filePath.trim() !== '') {
+					void this._app.workspace.openLinkText(filePath, '', true);
+				} else {
+					console.warn('Could not determine a path for this element.');
+				}
+			}
+		});
 	}
 }
+
 
 function GetPath(Source: string): string {
 	if (Source === undefined) {
