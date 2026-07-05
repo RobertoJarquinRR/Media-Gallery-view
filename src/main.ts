@@ -12,13 +12,14 @@ export default class MediaGallery extends Plugin {
 	async onload() {
 		this.registerMarkdownCodeBlockProcessor(
 			'MediaGallery',
-			(Source, Container, Context) => {
-				const path = GetPath(Source);
+
+
+			(source, container, context) => {
+
 				const gallery = new Gallery(
-					path,
-					Source,
-					Container,
-					Context,
+					source,
+					container,
+					context,
 					this.app,
 				);
 
@@ -38,50 +39,46 @@ export default class MediaGallery extends Plugin {
 
 
 class Gallery {
-	private _path: string;
 	private _source: string;
 	private _container: HTMLElement;
 	private _context: MarkdownPostProcessorContext;
 	public _app: App;
 
 	constructor(
-		Path: string,
 		source: string,
 		container: HTMLElement,
 		context: MarkdownPostProcessorContext,
 		app: App,
 	) {
-		this._path = Path;
 		this._source = source;
 		this._container = container;
 		this._context = context;
 		this._app = app;
+
+
 	}
 
-	public VideoGallery() {
-		let VideoExtensions = ['mp4', 'webm', 'ogv', 'mov'];
+	private getFiles() {
 
-		const div = this._container.createDiv();
+		const result = this._source.split(/\r?\n/)
+			.map((p) => p.trim().toLocaleLowerCase());
 
-		div.id = 'video-grid';
+		const path = result.find((p) => p.startsWith('path:'))
+			?.replace('path:', '')
+			.trim()
 
-		const files = this._app.vault
+		if (path) {
+			return this._app.vault
 			.getFiles()
-			.filter((file) => file.path.startsWith(this._path));
-		const VideoFiles = files.filter((video) =>
-			VideoExtensions.includes(video.extension),
-		);
+				.filter((file) => file.path.startsWith(normalizePath(path)))
+		}
+		else {
+			this._container.createEl('p', { text: 'Write a path' })
+			return;
+		}
 
-		if (files.length > 0) {
-			VideoFiles.forEach((video, index) => {
-				div.createDiv(
-					{
-						cls: 'video-card', attr: {
-							"data-path": video.path,
-						}
-					},
-					(videocard) => {
-						videocard.createEl('video', {
+
+	}
 							attr: {
 								src: this._app.vault.getResourcePath(video),
 								controls: 'true',
