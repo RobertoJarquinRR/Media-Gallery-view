@@ -23,8 +23,22 @@ export default class MediaGallery extends Plugin {
 					context,
 					this.app,
 				);
+				const typeGallery = source.split(/\r?\n/)
+					.map((p) => p.trim().toLocaleLowerCase()).find((p => p.startsWith('type:')))?.replace('type:', '');
 
-				gallery.VideoGallery();
+				switch (typeGallery) {
+					case 'video':
+						gallery.videoGallery()
+						break;
+					case 'image':
+						gallery.imagesGallery()
+						break;
+					default:
+						gallery.videoGallery()
+
+				}
+
+
 
 			},
 		);
@@ -41,7 +55,6 @@ interface GalleryObcions {
 	onClick?: (File: TFile, tag: keyof HTMLElementTagNameMap) => void,
 	ondblClick?: (path: string, event: MouseEvent, tag: string) => void
 }
-
 
 class Gallery {
 	private _source: string;
@@ -81,7 +94,7 @@ class Gallery {
 
 		if (path) {
 			return this._app.vault
-			.getFiles()
+				.getFiles()
 				.filter((file) => file.path.startsWith(normalizePath(path)))
 		}
 		else {
@@ -91,6 +104,7 @@ class Gallery {
 
 
 	}
+
 	private galleryElement(galleryGrid: HTMLElement, file: TFile, tag: keyof HTMLElementTagNameMap, opcions: GalleryObcions): void {
 		const fileCard = galleryGrid.createDiv({
 			cls: Gallery.FILE_CARD_CLASS, attr: {
@@ -132,6 +146,46 @@ class Gallery {
 		})
 
 	}
+
+	private getOrCreateOverlay(): HTMLElement {
+		if (this._overlay) return this._overlay;
+
+		const overlay = activeDocument.body.createDiv({ cls: Gallery.OVERLAY_CLASS });
+		overlay.addClass('is-hidden');
+
+		overlay.addEventListener('click', (envent) => {
+			if (envent.target === overlay) {
+				this.closeOverlay();
+			}
+
+		});
+
+		activeDocument.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape') this.closeOverlay();
+		});
+
+		this._overlay = overlay;
+		return overlay;
+	}
+	private openOverlay(file: TFile, tag: keyof HTMLElementTagNameMap): void {
+		const overlay = this.getOrCreateOverlay();
+		overlay.empty();
+
+		const config: DomElementInfo = {
+			attr: {
+				src: this._app.vault.getResourcePath(file),
+
+			}
+		};
+
+		overlay.createEl(tag, config);
+		overlay.removeClass('is-hidden');
+	}
+	private closeOverlay(): void {
+		this._overlay?.addClass('is-hidden');
+	}
+
+
 	public videoGallery() {
 
 		let videoExtensions = ['mkv', 'mov', 'mp4', 'ogv', 'webm'];
@@ -160,13 +214,13 @@ class Gallery {
 
 			const opcions: GalleryObcions = {
 				elementConfig: {
-							attr: {
-								src: this._app.vault.getResourcePath(video),
-								controls: 'true',
-								muted: 'true',
-								preload: 'auto',
+					attr: {
+						src: this._app.vault.getResourcePath(video),
+						controls: 'true',
+						muted: 'true',
+						preload: 'auto',
 
-							},
+					},
 				},
 
 
@@ -178,41 +232,51 @@ class Gallery {
 
 
 	}
-				return;
-			}
 
-			const videoCard = target.closest('.video-card');
+	public imagesGallery() {
+		let imagesExtensions = ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'];
 
-			if (videoCard !== null) {
-				let filePath: string | null = videoCard.getAttribute('data-path');
+		const files = this.getFiles();
 
-				if (!filePath) {
-					const titleParagraph = videoCard.querySelector('.video-info p');
-					if (titleParagraph && titleParagraph.textContent) {
-						filePath = `${titleParagraph.textContent.trim()}.mp4`;
+		if (!files) {
+			return;
+		}
+
+		const imagesFiles = files.filter((image) =>
+			imagesExtensions.includes(image.extension))
+
+		const galleryGrid = this._container.createDiv()
+		galleryGrid.id = Gallery.GALLERY_GRID_ID;
+
+
+
+		if (imagesFiles.length === 0) {
+			galleryGrid.createEl('p', { text: 'Images not found' });
+			return;
+		}
+
+		this.openNewLeft(galleryGrid, 'img')
+		imagesFiles.forEach((image) => {
+			const opcions: GalleryObcions = {
+				elementConfig: {
+					attr: {
+						src: this._app.vault.getResourcePath(image),
+						loading: 'lazy'
 					}
-				}
+				},
+				onClick: (file, tag) => this.openOverlay(file, tag)
+				,
 
-				if (filePath && filePath.trim() !== '') {
-					void this._app.workspace.openLinkText(filePath, '', true);
-				} else {
-					console.warn('Could not determine a path for this element.');
-				}
 			}
+
+			this.galleryElement(galleryGrid, image, 'img', opcions);
+
+
 		});
+
 	}
-}
 
 
-function GetPath(Source: string): string {
-	if (Source === undefined) {
-		return 'Write a path';
-	}
-	const result = Source.split(',')
-		.map((p) => p.trim().toLocaleLowerCase())
-		.find((p) => p.startsWith('path:'))
-		?.replace('path:', '')
-		.trim();
 
-	return normalizePath(result ?? 'Write a path');
+
 }
