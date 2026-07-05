@@ -5,14 +5,9 @@ import {
 	normalizePath,
 } from 'obsidian';
 
-import {
-	DEFAULT_SETTINGS,
-	MediaGallerySetting,
-	SettingTab,
-} from './settings.js';
 
 export default class MediaGallery extends Plugin {
-	settings!: MediaGallerySetting;
+
 
 	async onload() {
 		this.registerMarkdownCodeBlockProcessor(
@@ -32,25 +27,15 @@ export default class MediaGallery extends Plugin {
 			},
 		);
 
-		this.addSettingTab(new SettingTab(this.app, this));
+
 	}
 
 	onunload() { }
 
-	async loadSettings() {
-		this.settings = Object.assign(
-			{},
 
-			DEFAULT_SETTINGS,
-
-			(await this.loadData()) as Partial<MediaGallerySetting>,
-		);
-	}
-
-	async saveSettings() {
-		await this.saveData(this.settings);
-	}
+	
 }
+
 
 class Gallery {
 	private _path: string;
