@@ -24,8 +24,8 @@ export default class MediaGallery extends Plugin {
 					this.app,
 				);
 				const typeGallery = source.split(/\r?\n/)
-					.map((p) => p.trim().toLocaleLowerCase()).find((p => p.startsWith('type:')))?.replace('type:', '');
-
+					.map((p) => p.trim().toLocaleLowerCase()).find((p => p.startsWith('type:')))?.replace('type:', '').trim();
+				
 				switch (typeGallery) {
 					case 'video':
 						gallery.videoGallery()
@@ -35,7 +35,8 @@ export default class MediaGallery extends Plugin {
 						break;
 					default:
 						gallery.videoGallery()
-
+						break;
+					
 				}
 
 
