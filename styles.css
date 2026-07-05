@@ -51,3 +51,30 @@
 .mg-file-card video:hover::-webkit-media-controls {
 	opacity: 1;
 }
+
+.mg-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background: rgba(0, 0, 0, 0.95);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 9999;
+	cursor: zoom-out;
+}
+
+.mg-overlay img,
+.mg-overlay video {
+	max-width: 95vw;
+	max-height: 95vh;
+	width: auto;
+	height: auto;
+	object-fit: scale-down;
+}
+
+.mg-overlay.is-hidden {
+	display: none;
+}
