@@ -1,9 +1,10 @@
-#video-grid {
+#mg-gallery-grid {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 12px;
 }
-.video-card {
+
+.mg-file-card {
 	height: 290px;
 	flex-grow: 0;
 	flex-shrink: 0;
@@ -14,7 +15,7 @@
 	cursor: pointer;
 }
 
-.video-card video {
+.mg-file-card .mg-media-element {
 	height: 260px;
 	width: auto;
 	object-fit: contain;
@@ -23,7 +24,7 @@
 	flex-shrink: 0;
 }
 
-.video-card .video-info {
+.mg-file-card .mg-info {
 	height: 30px;
 	flex-shrink: 0;
 	padding: 0 8px;
@@ -31,16 +32,8 @@
 	align-items: center;
 	background-color: var(--background-secondary);
 }
-.video-card video::-webkit-media-controls {
-	opacity: 0;
-	transition: opacity 0.2s ease-in-out;
-}
 
-.video-card video:hover::-webkit-media-controls {
-	opacity: 1;
-}
-
-.video-card .video-info p {
+.mg-file-card .mg-info p {
 	font-size: 0.8em;
 	margin: 0;
 	text-align: center;
@@ -48,4 +41,40 @@
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	color: var(--text-muted);
+}
+
+.mg-file-card video::-webkit-media-controls {
+	opacity: 0;
+	transition: opacity 0.2s ease-in-out;
+}
+
+.mg-file-card video:hover::-webkit-media-controls {
+	opacity: 1;
+}
+
+.mg-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background: rgba(0, 0, 0, 0.95);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 9999;
+	cursor: zoom-out;
+}
+
+.mg-overlay img,
+.mg-overlay video {
+	max-width: 95vw;
+	max-height: 95vh;
+	width: auto;
+	height: auto;
+	object-fit: scale-down;
+}
+
+.mg-overlay.is-hidden {
+	display: none;
 }
