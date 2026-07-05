@@ -43,6 +43,7 @@
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	color: var(--text-muted);
+	user-select: all;
 }
 
 .mg-file-card video::-webkit-media-controls {
