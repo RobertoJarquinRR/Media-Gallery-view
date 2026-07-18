@@ -1,7 +1,7 @@
 {
 	"id": "media-gallery-grid",
 	"name": "Media Gallery view",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"minAppVersion": "1.0.0",
 	"description": "Make a gallery of your videos, images and more.",
 	"author": "RobertoJarquinRR",

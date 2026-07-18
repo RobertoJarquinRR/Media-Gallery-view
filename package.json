@@ -1,6 +1,6 @@
 {
 	"name": "Media-Gallery",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"description": "Make a gallery of your videos and images",
 	"main": "main.js",
 	"type": "module",
