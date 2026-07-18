@@ -6,55 +6,46 @@ import {
 	TFile,
 } from 'obsidian';
 
-
 export default class MediaGallery extends Plugin {
-
-
 	async onload() {
 		this.registerMarkdownCodeBlockProcessor(
 			'MediaGallery',
 
-
 			(source, container, context) => {
-
 				const gallery = new Gallery(
 					source,
 					container,
 					context,
 					this.app,
 				);
-				const typeGallery = source.split(/\r?\n/)
-					.map((p) => p.trim().toLocaleLowerCase()).find((p => p.startsWith('type:')))?.replace('type:', '').trim();
-				
+				const typeGallery = source
+					.split(/\r?\n/)
+					.map((p) => p.trim().toLocaleLowerCase())
+					.find((p) => p.startsWith('type:'))
+					?.replace('type:', '')
+					.trim();
+
 				switch (typeGallery) {
 					case 'video':
-						gallery.videoGallery()
+						gallery.videoGallery();
 						break;
 					case 'image':
-						gallery.imagesGallery()
+						gallery.imagesGallery();
 						break;
 					default:
-						gallery.videoGallery()
+						gallery.videoGallery();
 						break;
-					
 				}
-
-
-
 			},
 		);
-
-
 	}
 
 	onunload() { }
-
-
 }
 interface GalleryObcions {
-	elementConfig: DomElementInfo,
-	onClick?: (File: TFile, tag: keyof HTMLElementTagNameMap) => void,
-	ondblClick?: (path: string, event: MouseEvent, tag: string) => void
+	elementConfig: DomElementInfo;
+	onClick?: (File: TFile, tag: keyof HTMLElementTagNameMap) => void;
+	ondblClick?: (path: string, event: MouseEvent, tag: string) => void;
 }
 
 class Gallery {
@@ -63,10 +54,10 @@ class Gallery {
 	private _context: MarkdownPostProcessorContext;
 	public _app: App;
 
-	private static readonly FILE_CARD_CLASS = 'mg-file-card'
-	private static readonly INFO_CARD_CLASS = 'mg-info'
-	private static readonly GALLERY_GRID_ID = 'mg-gallery-grid'
-	private static readonly MEDIA_ELEMENT_CLASS = 'mg-media-element'
+	private static readonly FILE_CARD_CLASS = 'mg-file-card';
+	private static readonly INFO_CARD_CLASS = 'mg-info';
+	private static readonly GALLERY_GRID_ID = 'mg-gallery-grid';
+	private static readonly MEDIA_ELEMENT_CLASS = 'mg-media-element';
 	private static readonly OVERLAY_CLASS = 'mg-overlay';
 	private _overlay: HTMLElement | null = null;
 
@@ -80,85 +71,84 @@ class Gallery {
 		this._container = container;
 		this._context = context;
 		this._app = app;
-
-
 	}
 
 	private getFiles() {
-
-		const result = this._source.split(/\r?\n/)
+		const result = this._source
+			.split(/\r?\n/)
 			.map((p) => p.trim().toLocaleLowerCase());
 
-		const path = result.find((p) => p.startsWith('path:'))
+		const path = result
+			.find((p) => p.startsWith('path:'))
 			?.replace('path:', '')
-			.trim()
+			.trim();
 
 		if (path) {
 			return this._app.vault
 				.getFiles()
-				.filter((file) => file.path.startsWith(normalizePath(path)))
-		}
-		else {
-			this._container.createEl('p', { text: 'Write a path' })
+				.filter((file) => file.path.startsWith(normalizePath(path)));
+		} else {
+			this._container.createEl('p', { text: 'Write a path' });
 			return;
 		}
-
-
 	}
 
-	private galleryElement(galleryGrid: HTMLElement, file: TFile, tag: keyof HTMLElementTagNameMap, opcions: GalleryObcions): void {
-		const fileCard = galleryGrid.createDiv({
-			cls: Gallery.FILE_CARD_CLASS, attr: {
-				'data-path': file.path
-			}
-		})
+	private galleryElement(
+		galleryGrid: HTMLElement,
+		files: TFile[],
+		tag: keyof HTMLElementTagNameMap,
+		opcions: GalleryObcions,
+	): void {
+		files.forEach((file) => {
+			const fileCard = galleryGrid.createDiv({
+				cls: Gallery.FILE_CARD_CLASS,
+				attr: {
+					'data-path': file.path,
+				},
+			});
 
-		const element = fileCard.createEl(tag, opcions.elementConfig)
-		element.addClass(Gallery.MEDIA_ELEMENT_CLASS);
+			opcions.elementConfig.attr!.src =
+				this._app.vault.getResourcePath(file);
 
-		const info = fileCard.createDiv({ cls: Gallery.INFO_CARD_CLASS })
+			const element = fileCard.createEl(tag, opcions.elementConfig);
+			element.addClass(Gallery.MEDIA_ELEMENT_CLASS);
 
+			const info = fileCard.createDiv({ cls: Gallery.INFO_CARD_CLASS });
 
-		info.createEl('p', { text: file.basename + '.' + file.extension });
+			info.createEl('p', { text: file.basename + '.' + file.extension });
 
-		element.addEventListener('click', () => {
-			opcions.onClick?.(file, tag)
+			element.addEventListener('click', () => {
+				opcions.onClick?.(file, tag);
+			});
 		});
-
-
-
-
-
 	}
 	private openNewLeft(div: HTMLDivElement, tag: string): void {
-
 		div.addEventListener('dblclick', (event) => {
-			const target = event.target as HTMLElement
+			const target = event.target as HTMLElement;
 			if (target.tagName.toLocaleLowerCase() === tag) {
 				return;
 			}
 
-			const file = target.closest(`.${Gallery.FILE_CARD_CLASS}`)
-			const filePath = file?.getAttribute('data-path')
+			const file = target.closest(`.${Gallery.FILE_CARD_CLASS}`);
+			const filePath = file?.getAttribute('data-path');
 			if (filePath) {
-				void this._app.workspace.openLinkText(filePath, '', true)
+				void this._app.workspace.openLinkText(filePath, '', true);
 			}
-
-		})
-
+		});
 	}
 
 	private getOrCreateOverlay(): HTMLElement {
 		if (this._overlay) return this._overlay;
 
-		const overlay = activeDocument.body.createDiv({ cls: Gallery.OVERLAY_CLASS });
+		const overlay = activeDocument.body.createDiv({
+			cls: Gallery.OVERLAY_CLASS,
+		});
 		overlay.addClass('is-hidden');
 
 		overlay.addEventListener('click', (envent) => {
 			if (envent.target === overlay) {
 				this.closeOverlay();
 			}
-
 		});
 
 		activeDocument.addEventListener('keydown', (e) => {
@@ -175,8 +165,7 @@ class Gallery {
 		const config: DomElementInfo = {
 			attr: {
 				src: this._app.vault.getResourcePath(file),
-
-			}
+			},
 		};
 
 		overlay.createEl(tag, config);
@@ -186,11 +175,8 @@ class Gallery {
 		this._overlay?.addClass('is-hidden');
 	}
 
-
 	public videoGallery() {
-
 		let videoExtensions = ['mkv', 'mov', 'mp4', 'ogv', 'webm'];
-
 
 		const files = this.getFiles();
 
@@ -204,38 +190,36 @@ class Gallery {
 		const galleryGrid = this._container.createDiv();
 		galleryGrid.id = Gallery.GALLERY_GRID_ID;
 
-
 		if (videoFiles.length === 0) {
 			galleryGrid.createEl('p', { text: 'Video not found' });
 			return;
 		}
-		this.openNewLeft(galleryGrid, 'video')
-		videoFiles.forEach((video) => {
+		this.openNewLeft(galleryGrid, 'video');
 
-
-			const opcions: GalleryObcions = {
-				elementConfig: {
-					attr: {
-						src: this._app.vault.getResourcePath(video),
-						controls: 'true',
-						muted: 'true',
-						preload: 'auto',
-
-					},
+		const opcions: GalleryObcions = {
+			elementConfig: {
+				attr: {
+					src: '',
+					controls: 'true',
+					muted: 'true',
+					preload: 'auto',
 				},
-
-
-			}
-
-			this.galleryElement(galleryGrid, video, 'video', opcions);
-		})
-
-
-
+			},
+		};
+		this.galleryElement(galleryGrid, videoFiles, 'video', opcions);
 	}
 
 	public imagesGallery() {
-		let imagesExtensions = ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'];
+		let imagesExtensions = [
+			'avif',
+			'bmp',
+			'gif',
+			'jpeg',
+			'jpg',
+			'png',
+			'svg',
+			'webp',
+		];
 
 		const files = this.getFiles();
 
@@ -244,40 +228,27 @@ class Gallery {
 		}
 
 		const imagesFiles = files.filter((image) =>
-			imagesExtensions.includes(image.extension))
+			imagesExtensions.includes(image.extension),
+		);
 
-		const galleryGrid = this._container.createDiv()
+		const galleryGrid = this._container.createDiv();
 		galleryGrid.id = Gallery.GALLERY_GRID_ID;
-
-
 
 		if (imagesFiles.length === 0) {
 			galleryGrid.createEl('p', { text: 'Images not found' });
 			return;
 		}
 
-		this.openNewLeft(galleryGrid, 'img')
-		imagesFiles.forEach((image) => {
-			const opcions: GalleryObcions = {
-				elementConfig: {
-					attr: {
-						src: this._app.vault.getResourcePath(image),
-						loading: 'lazy'
-					}
+		this.openNewLeft(galleryGrid, 'img');
+		const opcions: GalleryObcions = {
+			elementConfig: {
+				attr: {
+					src: '',
 				},
-				onClick: (file, tag) => this.openOverlay(file, tag)
-				,
+			},
+			onClick: (file, tag) => this.openOverlay(file, tag),
+		};
 
-			}
-
-			this.galleryElement(galleryGrid, image, 'img', opcions);
-
-
-		});
-
+		this.galleryElement(galleryGrid, imagesFiles, 'img', opcions);
 	}
-
-
-
-
 }
