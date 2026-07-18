@@ -1,26 +1,23 @@
 #mg-gallery-grid {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 12px;
+	gap: 5px;
 }
 
 .mg-file-card {
 	height: 290px;
-	flex-grow: 0;
-	flex-shrink: 0;
+	flex: 1 0 auto;
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
-	border-radius: 8px;
 	cursor: pointer;
 }
 
 .mg-file-card .mg-media-element {
-	height: 260px;
-	width: auto;
-	object-fit: contain;
+	height: 100%;
+	width: 100%;
+	object-fit: cover;
 	display: block;
-	background: #000;
 	flex-shrink: 0;
 }
 
@@ -80,4 +77,9 @@
 
 .mg-overlay.is-hidden {
 	display: none;
+}
+
+.mg-file-card .mg-media-element:fullscreen {
+	object-fit: contain;
+	background: #000;
 }
