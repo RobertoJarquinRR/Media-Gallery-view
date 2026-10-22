@@ -31,6 +31,8 @@ export interface GalleryRenderOptions {
 	videoMuted: boolean;
 	videoAutoplay: boolean;
 	videoLoop: boolean;
+	overlayArrows: boolean;
+	onOverlayArrowsChange: (visible: boolean) => void;
 }
 
 export interface GalleryProcessor {

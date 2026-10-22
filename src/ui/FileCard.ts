@@ -6,8 +6,7 @@ export interface FileCardOptions {
 	mediaTag: keyof HTMLElementTagNameMap;
 	mediaAttributes: Record<string, string>;
 	showFileName: boolean;
-	deferSource: boolean;
-	onClick?: (file: TFile, tag: string) => void;
+	onClick?: (file: TFile, event: MouseEvent) => void;
 	onDoubleClick?: (file: TFile, event: MouseEvent) => void;
 }
 
@@ -41,6 +40,9 @@ export class FileCard {
 		card.className = 'mg-file-card';
 		card.dataset.path = options.file.path;
 		card.classList.add('mg-clickable');
+		if (options.showFileName) {
+			card.classList.add('mg-has-info');
+		}
 		return card;
 	}
 
@@ -53,11 +55,7 @@ export class FileCard {
 			element.setAttribute(key, value);
 		});
 
-		if (options.deferSource) {
-			element.dataset.src = options.resourcePath;
-		} else {
-			(element as HTMLMediaElement | HTMLImageElement).src = options.resourcePath;
-		}
+		(element as HTMLMediaElement | HTMLImageElement).src = options.resourcePath;
 
 		return element;
 	}
@@ -74,8 +72,8 @@ export class FileCard {
 
 	private attachEvents(options: FileCardOptions): void {
 		if (options.onClick) {
-			this.mediaElement.addEventListener('click', () => {
-				options.onClick?.(options.file, options.mediaTag);
+			this.mediaElement.addEventListener('click', (event) => {
+				options.onClick?.(options.file, event);
 			});
 		}
 

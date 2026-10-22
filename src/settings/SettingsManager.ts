@@ -12,19 +12,21 @@ export interface MediaGallerySettings {
 	videoMuted: boolean;
 	videoAutoplay: boolean;
 	videoLoop: boolean;
+	overlayArrows: boolean;
 }
 
 export const DEFAULT_SETTINGS: MediaGallerySettings = {
 	videoExtensions: ['mkv', 'mov', 'mp4', 'ogv', 'webm'],
 	imageExtensions: ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'],
 	defaultType: 'video',
-	sortOrder: 'name-asc',
+	sortOrder: 'mtime-desc',
 	cardHeight: 290,
 	showFileNames: true,
 	videoControls: true,
 	videoMuted: true,
 	videoAutoplay: false,
 	videoLoop: false,
+	overlayArrows: true,
 };
 
 export class SettingsManager {
@@ -161,6 +163,17 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 			.addToggle((toggle) =>
 				toggle.setValue(settings.showFileNames).onChange(async (value) => {
 					await update({ showFileNames: value });
+				})
+			);
+
+		new Setting(containerEl)
+			.setName('Overlay arrows')
+			.setDesc(
+				'Show the side arrows in the image overlay. Tapping the edges always navigates'
+			)
+			.addToggle((toggle) =>
+				toggle.setValue(settings.overlayArrows).onChange(async (value) => {
+					await update({ overlayArrows: value });
 				})
 			);
 

@@ -37,6 +37,12 @@ export class ImageGallery implements GalleryProcessor {
 			options.cardHeight
 		);
 
+		this.overlay.setOptions({
+			arrowsVisible: options.overlayArrows,
+			onArrowsVisibleChange: options.onOverlayArrowsChange,
+			videoAttributes: {},
+		});
+
 		container.innerHTML = '';
 		container.appendChild(this.grid.getElement());
 
@@ -50,14 +56,11 @@ export class ImageGallery implements GalleryProcessor {
 				file: file.file,
 				resourcePath: file.resourcePath,
 				mediaTag: 'img',
-				mediaAttributes: {
-					loading: 'lazy',
-					decoding: 'async',
-				},
+				mediaAttributes: {},
 				showFileName: options.showFileNames,
-				deferSource: false,
-				onClick: (file: TFile, tag: string) => {
-					this.overlay.open(file, tag);
+				onClick: (file: TFile) => {
+					const index = files.findIndex((item) => item.file.path === file.path);
+					this.overlay.open(files, index, 'image');
 				},
 				onDoubleClick: (file: TFile) => {
 					void app.workspace.openLinkText(file.path, '', true);

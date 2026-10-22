@@ -2,12 +2,18 @@ import { GalleryProcessor, GalleryFile, GalleryRenderOptions } from '../core/typ
 import { App, TFile } from 'obsidian';
 import { FileCard, FileCardOptions } from '../ui/FileCard';
 import { GalleryGrid } from '../ui/GalleryGrid';
+import { OverlayManager } from '../ui/OverlayManager';
 
 export class VideoGallery implements GalleryProcessor {
 	readonly supportedType = 'video';
 	readonly supportedExtensions = ['mkv', 'mov', 'mp4', 'ogv', 'webm'] as const;
 
 	private grid: GalleryGrid | null = null;
+	private readonly overlay: OverlayManager;
+
+	constructor(app: App) {
+		this.overlay = new OverlayManager(app);
+	}
 
 	process(
 		files: GalleryFile[],
@@ -31,13 +37,35 @@ export class VideoGallery implements GalleryProcessor {
 		}
 
 		const mediaAttributes: Record<string, string> = {
-			preload: 'none',
+			preload: 'metadata',
 			playsinline: 'true',
 		};
-		if (options.videoControls) mediaAttributes.controls = 'true';
-		if (options.videoMuted) mediaAttributes.muted = 'true';
-		if (options.videoAutoplay) mediaAttributes.autoplay = 'true';
-		if (options.videoLoop) mediaAttributes.loop = 'true';
+		const overlayAttributes: Record<string, string> = {
+			preload: 'auto',
+			playsinline: 'true',
+		};
+		if (options.videoControls) {
+			mediaAttributes.controls = 'true';
+			overlayAttributes.controls = 'true';
+		}
+		if (options.videoMuted) {
+			mediaAttributes.muted = 'true';
+			overlayAttributes.muted = 'true';
+		}
+		if (options.videoAutoplay) {
+			mediaAttributes.autoplay = 'true';
+			overlayAttributes.autoplay = 'true';
+		}
+		if (options.videoLoop) {
+			mediaAttributes.loop = 'true';
+			overlayAttributes.loop = 'true';
+		}
+
+		this.overlay.setOptions({
+			arrowsVisible: options.overlayArrows,
+			onArrowsVisibleChange: options.onOverlayArrowsChange,
+			videoAttributes: overlayAttributes,
+		});
 
 		for (const file of files) {
 			const cardOptions: FileCardOptions = {
@@ -46,7 +74,17 @@ export class VideoGallery implements GalleryProcessor {
 				mediaTag: 'video',
 				mediaAttributes,
 				showFileName: options.showFileNames,
-				deferSource: true,
+				onClick: (clicked: TFile, event: MouseEvent) => {
+					const target = event.target as HTMLElement;
+					const bounds = target.getBoundingClientRect();
+					if (event.clientY > bounds.bottom - 40) {
+						return;
+					}
+					const index = files.findIndex(
+						(item) => item.file.path === clicked.path
+					);
+					this.overlay.open(files, index, 'video');
+				},
 				onDoubleClick: (file: TFile) => {
 					void app.workspace.openLinkText(file.path, '', true);
 				},
@@ -55,12 +93,11 @@ export class VideoGallery implements GalleryProcessor {
 			const card = new FileCard(app, cardOptions);
 			this.grid.addCard(card.getElement());
 		}
-
-		this.grid.lazyLoadMedia();
 	}
 
 	destroy(): void {
 		this.grid?.destroy();
 		this.grid = null;
+		this.overlay.destroy();
 	}
 }

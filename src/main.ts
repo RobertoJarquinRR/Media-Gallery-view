@@ -45,7 +45,7 @@ export default class MediaGallery extends Plugin {
 	}
 
 	private registerProcessors(): void {
-		this.registry.register(new VideoGallery());
+		this.registry.register(new VideoGallery(this.app));
 		this.registry.register(new ImageGallery(this.app));
 	}
 
@@ -106,7 +106,16 @@ export default class MediaGallery extends Plugin {
 			videoMuted: settings.videoMuted,
 			videoAutoplay: settings.videoAutoplay,
 			videoLoop: settings.videoLoop,
+			overlayArrows: settings.overlayArrows,
+			onOverlayArrowsChange: (visible: boolean) => {
+				void this.saveOverlayArrows(visible);
+			},
 		});
+	}
+
+	private async saveOverlayArrows(visible: boolean): Promise<void> {
+		this.settingsManager.updateSettings({ overlayArrows: visible });
+		await this.settingsManager.save();
 	}
 
 	private resolveExtensions(
