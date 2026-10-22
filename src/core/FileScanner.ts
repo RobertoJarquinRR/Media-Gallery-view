@@ -13,7 +13,8 @@ export class FileScanner {
 	scan(
 		path: string,
 		extensions: readonly string[],
-		sortOrder: SortOrder = 'name-asc'
+		sortOrder: SortOrder = 'name-asc',
+		excludePaths: readonly string[] = []
 	): GalleryFile[] {
 		const normalizedPath = this.normalizePath(path);
 		const allFiles = this.vault.getFiles();
@@ -22,7 +23,8 @@ export class FileScanner {
 			.filter(
 				(file: TFile) =>
 					file.path.startsWith(normalizedPath) &&
-					extensions.includes(file.extension)
+					extensions.includes(file.extension) &&
+					!this.isExcluded(file, excludePaths)
 			)
 			.sort((a, b) => this.compare(a, b, sortOrder))
 			.map((file: TFile) => ({
@@ -42,6 +44,17 @@ export class FileScanner {
 				file,
 				resourcePath: this.vault.getResourcePath(file),
 			}));
+	}
+
+	private isExcluded(file: TFile, excludePaths: readonly string[]): boolean {
+		return excludePaths.some((excluded) => {
+			const normalized = this.normalizePath(excluded).replace(/\/+$/, '');
+			if (!normalized) return false;
+			return (
+				file.path === normalized ||
+				file.path.startsWith(`${normalized}/`)
+			);
+		});
 	}
 
 	private compare(a: TFile, b: TFile, sortOrder: SortOrder): number {

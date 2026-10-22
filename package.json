@@ -1,7 +1,7 @@
 {
 	"name": "Media-Gallery",
 	"version": "0.3.0",
-	"description": "Make a gallery of your videos and images",
+	"description": "Make a gallery of your videos, images and PDFs",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
@@ -24,5 +24,8 @@
 		"obsidian": "latest",
 		"typescript": "^5.8.3",
 		"typescript-eslint": "^8.59.1"
+	},
+	"dependencies": {
+		"pdfjs-dist": "^4.10.38"
 	}
 }

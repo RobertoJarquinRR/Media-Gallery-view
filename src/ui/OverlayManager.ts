@@ -1,12 +1,25 @@
 import { App } from 'obsidian';
 import { GalleryFile } from '../core/types';
 
-export type OverlayMediaType = 'image' | 'video';
+export type OverlayMediaType = 'image' | 'video' | 'pdf';
+
+export interface OverlayContentHandle {
+	destroy(): void;
+}
 
 export interface OverlayOptions {
 	arrowsVisible: boolean;
 	onArrowsVisibleChange: (visible: boolean) => void;
 	videoAttributes: Record<string, string>;
+	renderContent?: (
+		item: GalleryFile,
+		stage: HTMLElement,
+		mediaType: OverlayMediaType
+	) => OverlayContentHandle | void;
+	thumbSrc?: (item: GalleryFile) => string | undefined;
+	onOpenExternal?: (item: GalleryFile) => void;
+	onDoubleClickContent?: (item: GalleryFile) => void;
+	onKeyDown?: (event: KeyboardEvent) => boolean;
 }
 
 export class OverlayManager {
@@ -16,6 +29,8 @@ export class OverlayManager {
 	private thumbsBar: HTMLDivElement | null = null;
 	private counter: HTMLSpanElement | null = null;
 	private toggleButton: HTMLButtonElement | null = null;
+	private openButton: HTMLButtonElement | null = null;
+	private contentHandle: OverlayContentHandle | null = null;
 
 	private items: GalleryFile[] = [];
 	private index = 0;
@@ -35,6 +50,7 @@ export class OverlayManager {
 	setOptions(options: OverlayOptions): void {
 		this.options = options;
 		this.applyArrowsVisibility();
+		this.applyOpenVisibility();
 	}
 
 	open(items: GalleryFile[], index: number, mediaType: OverlayMediaType): void {
@@ -48,6 +64,7 @@ export class OverlayManager {
 		this.renderThumbs();
 		this.renderCurrent();
 		this.applyArrowsVisibility();
+		this.applyOpenVisibility();
 		this.overlay?.classList.remove('is-hidden');
 
 		doc.removeEventListener('keydown', this.boundKeyDown);
@@ -56,6 +73,7 @@ export class OverlayManager {
 
 	close(): void {
 		this.pauseMedia();
+		this.destroyContent();
 		this.overlay?.classList.add('is-hidden');
 		this.getDocument().removeEventListener('keydown', this.boundKeyDown);
 	}
@@ -68,6 +86,7 @@ export class OverlayManager {
 		this.thumbsBar = null;
 		this.counter = null;
 		this.toggleButton = null;
+		this.openButton = null;
 	}
 
 	private getDocument(): Document {
@@ -103,7 +122,19 @@ export class OverlayManager {
 			this.toggleArrows();
 		});
 
+		this.openButton = doc.createElement('button');
+		this.openButton.type = 'button';
+		this.openButton.className = 'mg-overlay-open';
+		this.openButton.textContent = '↗';
+		this.openButton.setAttribute('aria-label', 'Open in default app');
+		this.openButton.title = 'Open in default app';
+		this.openButton.addEventListener('click', (event) => {
+			event.stopPropagation();
+			this.openCurrent();
+		});
+
 		toolbar.appendChild(this.counter);
+		toolbar.appendChild(this.openButton);
 		toolbar.appendChild(this.toggleButton);
 
 		this.thumbsBar = doc.createElement('div');
@@ -129,6 +160,22 @@ export class OverlayManager {
 			if (event.target === this.overlay) {
 				this.close();
 			}
+		});
+
+		this.stage.addEventListener('click', (event) => {
+			if (event.target === this.stage) {
+				this.close();
+			}
+		});
+
+		this.stage.addEventListener('dblclick', (event) => {
+			if (this.mediaType !== 'pdf') return;
+			event.preventDefault();
+
+			const item = this.items[this.index];
+			if (!item) return;
+
+			(this.options.onDoubleClickContent ?? this.options.onOpenExternal)?.(item);
 		});
 
 		doc.body.appendChild(this.overlay);
@@ -157,6 +204,20 @@ export class OverlayManager {
 		};
 
 		edge.addEventListener('click', go);
+		edge.addEventListener(
+			'wheel',
+			(event) => {
+				if (event.deltaY === 0) return;
+
+				const scroller =
+					this.stage?.querySelector<HTMLElement>('.mg-pdf-scroll');
+				if (!scroller) return;
+
+				scroller.scrollBy({ top: event.deltaY });
+				event.preventDefault();
+			},
+			{ passive: false }
+		);
 		edge.addEventListener('keydown', (event) => {
 			if (event.key === 'Enter' || event.key === ' ') {
 				event.preventDefault();
@@ -174,19 +235,29 @@ export class OverlayManager {
 		if (!item) return;
 
 		this.pauseMedia();
+		this.destroyContent();
 		this.stage.innerHTML = '';
+		this.stage.classList.toggle('mg-overlay-stage-pdf', this.mediaType === 'pdf');
+		this.overlay?.classList.toggle('is-pdf', this.mediaType === 'pdf');
 
-		const doc = this.getDocument();
-		const media = doc.createElement(this.mediaType === 'video' ? 'video' : 'img');
+		if (this.options.renderContent) {
+			this.contentHandle =
+				this.options.renderContent(item, this.stage, this.mediaType) ?? null;
+		} else {
+			const doc = this.getDocument();
+			const media = doc.createElement(
+				this.mediaType === 'video' ? 'video' : 'img'
+			);
 
-		if (this.mediaType === 'video') {
-			Object.entries(this.options.videoAttributes).forEach(([key, value]) => {
-				media.setAttribute(key, value);
-			});
+			if (this.mediaType === 'video') {
+				Object.entries(this.options.videoAttributes).forEach(([key, value]) => {
+					media.setAttribute(key, value);
+				});
+			}
+
+			(media as HTMLImageElement | HTMLMediaElement).src = item.resourcePath;
+			this.stage.appendChild(media);
 		}
-
-		(media as HTMLImageElement | HTMLMediaElement).src = item.resourcePath;
-		this.stage.appendChild(media);
 
 		this.counter.textContent = `${this.index + 1} / ${this.items.length}`;
 		this.updateThumbSelection();
@@ -207,20 +278,36 @@ export class OverlayManager {
 			thumb.title = item.file.basename;
 
 			const isVideo = this.mediaType === 'video';
-			const preview = doc.createElement(isVideo ? 'video' : 'img');
+			const thumbSource = this.options.thumbSrc?.(item);
 
-			if (isVideo) {
-				preview.setAttribute('muted', 'true');
-				preview.setAttribute('preload', 'metadata');
-				preview.setAttribute('playsinline', 'true');
-				preview.setAttribute('src', `${item.resourcePath}#t=0.1`);
-			} else {
+			if (thumbSource) {
+				const preview = doc.createElement('img');
 				preview.setAttribute('loading', 'lazy');
-				preview.setAttribute('src', item.resourcePath);
+				preview.setAttribute('src', thumbSource);
 				preview.setAttribute('alt', item.file.basename);
+				thumb.appendChild(preview);
+			} else if (this.mediaType === 'pdf') {
+				thumb.classList.add('is-placeholder');
+				const label = doc.createElement('span');
+				label.textContent = 'PDF';
+				thumb.appendChild(label);
+			} else {
+				const preview = doc.createElement(isVideo ? 'video' : 'img');
+
+				if (isVideo) {
+					preview.setAttribute('muted', 'true');
+					preview.setAttribute('preload', 'metadata');
+					preview.setAttribute('playsinline', 'true');
+					preview.setAttribute('src', `${item.resourcePath}#t=0.1`);
+				} else {
+					preview.setAttribute('loading', 'lazy');
+					preview.setAttribute('src', item.resourcePath);
+					preview.setAttribute('alt', item.file.basename);
+				}
+
+				thumb.appendChild(preview);
 			}
 
-			thumb.appendChild(preview);
 			this.thumbsBar?.appendChild(thumb);
 		});
 
@@ -258,8 +345,28 @@ export class OverlayManager {
 		this.toggleButton?.classList.toggle('is-active', this.options.arrowsVisible);
 	}
 
+	private applyOpenVisibility(): void {
+		this.openButton?.classList.toggle(
+			'is-hidden',
+			typeof this.options.onOpenExternal !== 'function'
+		);
+	}
+
+	private openCurrent(): void {
+		const item = this.items[this.index];
+		if (!item) return;
+		this.options.onOpenExternal?.(item);
+	}
+
+	private destroyContent(): void {
+		this.contentHandle?.destroy();
+		this.contentHandle = null;
+	}
+
 	private handleKeyDown(event: KeyboardEvent): void {
 		if (!this.overlay || this.overlay.classList.contains('is-hidden')) return;
+
+		if (this.options.onKeyDown?.(event)) return;
 
 		switch (event.key) {
 			case 'Escape':

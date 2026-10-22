@@ -24,6 +24,20 @@ export type SortOrder =
 	| 'size-desc'
 	| 'size-asc';
 
+export type ThumbnailKind = 'pdf';
+
+export interface ThumbnailInfo {
+	src: string;
+	width?: number;
+	height?: number;
+	source: 'custom' | 'generated';
+}
+
+export interface ThumbnailResolver {
+	resolve(file: TFile, kind: ThumbnailKind): Promise<ThumbnailInfo | null>;
+	getKnown(file: TFile): ThumbnailInfo | null;
+}
+
 export interface GalleryRenderOptions {
 	cardHeight: number;
 	showFileNames: boolean;
@@ -33,6 +47,7 @@ export interface GalleryRenderOptions {
 	videoLoop: boolean;
 	overlayArrows: boolean;
 	onOverlayArrowsChange: (visible: boolean) => void;
+	thumbnails?: ThumbnailResolver;
 }
 
 export interface GalleryProcessor {

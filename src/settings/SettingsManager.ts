@@ -4,7 +4,10 @@ import { SortOrder } from '../core/types';
 export interface MediaGallerySettings {
 	videoExtensions: string[];
 	imageExtensions: string[];
-	defaultType: 'video' | 'image';
+	pdfExtensions: string[];
+	pdfOpenWith: 'obsidian' | 'system';
+	thumbnailFolder: string;
+	defaultType: 'video' | 'image' | 'pdf';
 	sortOrder: SortOrder;
 	cardHeight: number;
 	showFileNames: boolean;
@@ -18,6 +21,9 @@ export interface MediaGallerySettings {
 export const DEFAULT_SETTINGS: MediaGallerySettings = {
 	videoExtensions: ['mkv', 'mov', 'mp4', 'ogv', 'webm'],
 	imageExtensions: ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'],
+	pdfExtensions: ['pdf'],
+	pdfOpenWith: 'obsidian',
+	thumbnailFolder: '',
 	defaultType: 'video',
 	sortOrder: 'mtime-desc',
 	cardHeight: 290,
@@ -84,9 +90,12 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 				dropdown
 					.addOption('video', 'Video')
 					.addOption('image', 'Image')
+					.addOption('pdf', 'PDF')
 					.setValue(settings.defaultType)
 					.onChange(async (value) => {
-						await update({ defaultType: value as 'video' | 'image' });
+						await update({
+							defaultType: value as 'video' | 'image' | 'pdf',
+						});
 					})
 			);
 
@@ -143,6 +152,37 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 					})
 			);
 
+		new Setting(containerEl)
+			.setName('PDF extensions')
+			.setDesc('Comma-separated list of PDF file extensions')
+			.addTextArea((text) =>
+				text
+					.setPlaceholder('PDF')
+					.setValue(settings.pdfExtensions.join(', '))
+					.onChange(async (value) => {
+						await update({
+							pdfExtensions: parseExtensions(value),
+						});
+					})
+			);
+
+		new Setting(containerEl)
+			.setName('Open PDF files on double-click')
+			.setDesc(
+				'Double-clicking a PDF opens it in a new Obsidian tab or with the system default app'
+			)
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('obsidian', 'Obsidian tab')
+					.addOption('system', 'System default app')
+					.setValue(settings.pdfOpenWith)
+					.onChange(async (value) => {
+						await update({
+							pdfOpenWith: value as 'obsidian' | 'system',
+						});
+					})
+			);
+
 		new Setting(containerEl).setName('Appearance').setHeading();
 
 		new Setting(containerEl)
@@ -175,6 +215,20 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 				toggle.setValue(settings.overlayArrows).onChange(async (value) => {
 					await update({ overlayArrows: value });
 				})
+			);
+
+		new Setting(containerEl)
+			.setName('Custom thumbnail folder')
+			.setDesc(
+				'Vault folder with your own thumbnails. Files are matched by name: clip.pdf uses clip.png'
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder('Attachments/thumbnails')
+					.setValue(settings.thumbnailFolder)
+					.onChange(async (value) => {
+						await update({ thumbnailFolder: value.trim() });
+					})
 			);
 
 		new Setting(containerEl).setName('Video').setHeading();
@@ -215,4 +269,11 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 				})
 			);
 	}
+}
+
+function parseExtensions(value: string): string[] {
+	return value
+		.split(',')
+		.map((item) => item.trim().toLowerCase().replace(/^\./, ''))
+		.filter((item) => item.length > 0);
 }

@@ -13,6 +13,9 @@ import {
 
 import { VideoGallery } from './galleries/VideoGallery';
 import { ImageGallery } from './galleries/ImageGallery';
+import { PdfGallery } from './galleries/PdfGallery';
+import { ThumbnailService } from './thumbnails/ThumbnailService';
+import { disposePdfWorker } from './thumbnails/pdfWorker';
 
 import {
 	SettingsManager,
@@ -24,10 +27,13 @@ export default class MediaGallery extends Plugin {
 	private registry!: GalleryRegistry;
 	private fileScanner!: FileScanner;
 	private settingsManager!: SettingsManager;
+	private thumbnails!: ThumbnailService;
 
 	async onload(): Promise<void> {
 		this.settingsManager = new SettingsManager(this);
-		await this.settingsManager.load();
+		const settings = await this.settingsManager.load();
+		this.thumbnails = new ThumbnailService(this.app, this);
+		await this.thumbnails.init(settings.thumbnailFolder);
 
 		this.registry = new GalleryRegistry();
 		this.fileScanner = new FileScanner({
@@ -42,11 +48,14 @@ export default class MediaGallery extends Plugin {
 
 	onunload(): void {
 		this.registry.destroyAll();
+		this.thumbnails.destroy();
+		disposePdfWorker();
 	}
 
 	private registerProcessors(): void {
 		this.registry.register(new VideoGallery(this.app));
 		this.registry.register(new ImageGallery(this.app));
+		this.registry.register(new PdfGallery(this.app, this.settingsManager));
 	}
 
 	private registerMarkdownProcessor(): void {
@@ -76,6 +85,7 @@ export default class MediaGallery extends Plugin {
 		}
 
 		const settings = this.settingsManager.getSettings();
+		this.thumbnails.setCustomFolder(settings.thumbnailFolder);
 		const type = config.type || settings.defaultType;
 		const processor = this.registry.get(type);
 
@@ -92,7 +102,12 @@ export default class MediaGallery extends Plugin {
 			processor.supportedExtensions,
 			settings
 		);
-		const files = this.fileScanner.scan(config.path, extensions, settings.sortOrder);
+		const files = this.fileScanner.scan(
+			config.path,
+			extensions,
+			settings.sortOrder,
+			this.getExcludedPaths(settings)
+		);
 
 		if (files.length === 0) {
 			container.createEl('p', { text: `No ${type} files found in: ${config.path}` });
@@ -110,12 +125,18 @@ export default class MediaGallery extends Plugin {
 			onOverlayArrowsChange: (visible: boolean) => {
 				void this.saveOverlayArrows(visible);
 			},
+			thumbnails: this.thumbnails,
 		});
 	}
 
 	private async saveOverlayArrows(visible: boolean): Promise<void> {
 		this.settingsManager.updateSettings({ overlayArrows: visible });
 		await this.settingsManager.save();
+	}
+
+	private getExcludedPaths(settings: MediaGallerySettings): string[] {
+		const folder = settings.thumbnailFolder.trim();
+		return folder ? [folder] : [];
 	}
 
 	private resolveExtensions(
@@ -128,7 +149,9 @@ export default class MediaGallery extends Plugin {
 				? settings.videoExtensions
 				: type === 'image'
 					? settings.imageExtensions
-					: [];
+					: type === 'pdf'
+						? settings.pdfExtensions
+						: [];
 
 		return configured.length > 0 ? configured : fallback;
 	}

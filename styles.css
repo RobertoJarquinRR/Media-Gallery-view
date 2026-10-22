@@ -173,7 +173,8 @@
 	opacity: 0.85;
 }
 
-.mg-overlay-toggle {
+.mg-overlay-toggle,
+.mg-overlay-open {
 	border: 0;
 	background: transparent;
 	color: #fff;
@@ -184,12 +185,18 @@
 	border-radius: 6px;
 }
 
-.mg-overlay-toggle:hover {
+.mg-overlay-toggle:hover,
+.mg-overlay-open:hover {
 	background: rgba(255, 255, 255, 0.15);
 }
 
 .mg-overlay-toggle.is-active {
 	background: rgba(255, 255, 255, 0.22);
+}
+
+.mg-overlay-toggle.is-hidden,
+.mg-overlay-open.is-hidden {
+	display: none;
 }
 
 .mg-overlay-thumbs {
@@ -239,6 +246,145 @@
 	opacity: 1;
 }
 
+.mg-overlay-thumb.is-placeholder {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 0.65em;
+	letter-spacing: 0.04em;
+	color: #fff;
+	background: #1d1d1d;
+}
+
+.mg-file-card .mg-media-element.mg-media-pending {
+	background: var(--background-secondary);
+}
+
+.mg-file-card.mg-card-vertical {
+	flex: 0 0 auto;
+	width: calc(var(--mg-card-height, 290px) * 0.707);
+}
+
+.mg-file-card.mg-card-vertical.mg-has-info {
+	width: calc((var(--mg-card-height, 290px) - 30px) * 0.707);
+}
+
+.mg-file-card.mg-card-vertical .mg-media-element {
+	object-fit: contain;
+	background: var(--background-secondary);
+}
+
+.mg-overlay-stage-pdf {
+	padding: 16px 72px 104px;
+	pointer-events: auto;
+}
+
+.mg-overlay.is-pdf .mg-overlay-edge {
+	top: 50%;
+	width: 64px;
+	min-width: 0;
+	height: 88px;
+	padding: 0 12px;
+	transform: translateY(-50%);
+}
+
+.mg-pdf-viewer {
+	width: 100%;
+	height: 100%;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.mg-pdf-toolbar {
+	flex: 0 0 auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	color: #fff;
+}
+
+.mg-pdf-page-button {
+	border: 0;
+	background: rgba(255, 255, 255, 0.12);
+	color: #fff;
+	cursor: pointer;
+	font-size: 1.1rem;
+	line-height: 1;
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+}
+
+.mg-pdf-page-button:hover {
+	background: rgba(255, 255, 255, 0.24);
+}
+
+.mg-pdf-page-label {
+	min-width: 72px;
+	text-align: center;
+	font-size: 0.85em;
+	opacity: 0.85;
+}
+
+.mg-pdf-scroll {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+	overflow-x: hidden;
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 12px;
+	padding: 4px 4px 24px;
+}
+
+.mg-pdf-page {
+	width: min(100%, 900px);
+	aspect-ratio: var(--mg-pdf-aspect, 0.707);
+	flex: 0 0 auto;
+	background: rgba(255, 255, 255, 0.06);
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.mg-pdf-page-canvas {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
+.mg-pdf-page-preview {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+	background: #fff;
+}
+
+.mg-overlay-stage .mg-pdf-page-preview {
+	width: 100%;
+	height: 100%;
+	max-width: none;
+	max-height: none;
+}
+
+.mg-pdf-loading {
+	padding: 32px;
+	color: #fff;
+	opacity: 0.75;
+	font-size: 0.95em;
+}
+
+.mg-pdf-error {
+	color: #fff;
+	opacity: 0.8;
+	text-align: center;
+}
+
 .mg-overlay.is-hidden {
 	display: none;
 }
@@ -264,6 +410,10 @@
 	.mg-overlay-thumb {
 		width: 48px;
 		height: 48px;
+	}
+
+	.mg-overlay-stage-pdf {
+		padding: 8px 10px 84px;
 	}
 }
 

@@ -6,6 +6,9 @@ export interface FileCardOptions {
 	mediaTag: keyof HTMLElementTagNameMap;
 	mediaAttributes: Record<string, string>;
 	showFileName: boolean;
+	mediaWidth?: number;
+	mediaHeight?: number;
+	doubleClickMedia?: boolean;
 	onClick?: (file: TFile, event: MouseEvent) => void;
 	onDoubleClick?: (file: TFile, event: MouseEvent) => void;
 }
@@ -55,9 +58,29 @@ export class FileCard {
 			element.setAttribute(key, value);
 		});
 
-		(element as HTMLMediaElement | HTMLImageElement).src = options.resourcePath;
+		if (options.mediaWidth && options.mediaHeight) {
+			element.setAttribute('width', String(options.mediaWidth));
+			element.setAttribute('height', String(options.mediaHeight));
+		}
+
+		if (options.resourcePath) {
+			(element as HTMLMediaElement | HTMLImageElement).src =
+				options.resourcePath;
+		} else {
+			element.classList.add('mg-media-pending');
+		}
 
 		return element;
+	}
+
+	setMediaSource(src: string, width?: number, height?: number): void {
+		if (width && height) {
+			this.mediaElement.setAttribute('width', String(width));
+			this.mediaElement.setAttribute('height', String(height));
+		}
+
+		this.mediaElement.classList.remove('mg-media-pending');
+		(this.mediaElement as HTMLImageElement | HTMLMediaElement).src = src;
 	}
 
 	private createInfoElement(file: TFile): HTMLDivElement {
@@ -80,9 +103,9 @@ export class FileCard {
 		if (options.onDoubleClick) {
 			this.element.addEventListener('dblclick', (event) => {
 				const target = event.target as HTMLElement;
-				if (target.tagName.toLowerCase() !== options.mediaTag) {
-					options.onDoubleClick?.(options.file, event);
-				}
+				const isMedia = target.tagName.toLowerCase() === options.mediaTag;
+				if (isMedia && !options.doubleClickMedia) return;
+				options.onDoubleClick?.(options.file, event);
 			});
 		}
 	}
