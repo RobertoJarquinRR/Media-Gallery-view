@@ -16,10 +16,32 @@ export interface GalleryFile {
 	resourcePath: string;
 }
 
+export type SortOrder =
+	| 'name-asc'
+	| 'name-desc'
+	| 'mtime-desc'
+	| 'mtime-asc'
+	| 'size-desc'
+	| 'size-asc';
+
+export interface GalleryRenderOptions {
+	cardHeight: number;
+	showFileNames: boolean;
+	videoControls: boolean;
+	videoMuted: boolean;
+	videoAutoplay: boolean;
+	videoLoop: boolean;
+}
+
 export interface GalleryProcessor {
 	readonly supportedType: string;
 	readonly supportedExtensions: readonly string[];
-	process(files: GalleryFile[], container: HTMLElement, app: App): void;
+	process(
+		files: GalleryFile[],
+		container: HTMLElement,
+		app: App,
+		options: GalleryRenderOptions
+	): void;
 	destroy?(): void;
 }
 

@@ -1,4 +1,4 @@
-import { GalleryProcessor, GalleryFile } from '../core/types';
+import { GalleryProcessor, GalleryFile, GalleryRenderOptions } from '../core/types';
 import { App, TFile } from 'obsidian';
 import { FileCard, FileCardOptions } from '../ui/FileCard';
 import { GalleryGrid } from '../ui/GalleryGrid';
@@ -17,33 +17,45 @@ export class ImageGallery implements GalleryProcessor {
 		'webp',
 	] as const;
 
-	private grid!: GalleryGrid;
+	private grid: GalleryGrid | null = null;
 	private readonly overlay: OverlayManager;
 
 	constructor(app: App) {
 		this.overlay = new OverlayManager(app);
 	}
 
-	process(files: GalleryFile[], container: HTMLElement, app: App): void {
-		this.grid = new GalleryGrid('mg-gallery-grid', container.ownerDocument);
+	process(
+		files: GalleryFile[],
+		container: HTMLElement,
+		app: App,
+		options: GalleryRenderOptions
+	): void {
+		this.grid?.destroy();
+		this.grid = new GalleryGrid(
+			'mg-gallery-grid',
+			container.ownerDocument,
+			options.cardHeight
+		);
+
 		container.innerHTML = '';
 		container.appendChild(this.grid.getElement());
 
-		const imageFiles = files.filter((f) =>
-			this.supportedExtensions.includes(f.file.extension as typeof this.supportedExtensions[number])
-		);
-
-		if (imageFiles.length === 0) {
+		if (files.length === 0) {
 			this.grid.showEmptyMessage('Images not found');
 			return;
 		}
 
-		for (const file of imageFiles) {
+		for (const file of files) {
 			const cardOptions: FileCardOptions = {
 				file: file.file,
 				resourcePath: file.resourcePath,
 				mediaTag: 'img',
-				mediaAttributes: {},
+				mediaAttributes: {
+					loading: 'lazy',
+					decoding: 'async',
+				},
+				showFileName: options.showFileNames,
+				deferSource: false,
 				onClick: (file: TFile, tag: string) => {
 					this.overlay.open(file, tag);
 				},
@@ -58,7 +70,8 @@ export class ImageGallery implements GalleryProcessor {
 	}
 
 	destroy(): void {
-		this.grid.destroy();
+		this.grid?.destroy();
+		this.grid = null;
 		this.overlay.destroy();
 	}
 }

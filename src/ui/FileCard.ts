@@ -5,26 +5,32 @@ export interface FileCardOptions {
 	resourcePath: string;
 	mediaTag: keyof HTMLElementTagNameMap;
 	mediaAttributes: Record<string, string>;
+	showFileName: boolean;
+	deferSource: boolean;
 	onClick?: (file: TFile, tag: string) => void;
 	onDoubleClick?: (file: TFile, event: MouseEvent) => void;
 }
 
 function getActiveDocument(app: App): Document {
-	return app.workspace.containerEl?.ownerDocument ?? document;
+	return app.workspace.containerEl?.ownerDocument ?? activeDocument;
 }
 
 export class FileCard {
 	private readonly element: HTMLDivElement;
 	private readonly mediaElement: HTMLElement;
-	private readonly infoElement: HTMLDivElement;
+	private readonly infoElement: HTMLDivElement | null;
 
 	constructor(private readonly app: App, options: FileCardOptions) {
 		this.element = this.createCard(options);
 		this.mediaElement = this.createMediaElement(options);
-		this.infoElement = this.createInfoElement(options.file);
+		this.infoElement = options.showFileName
+			? this.createInfoElement(options.file)
+			: null;
 
 		this.element.appendChild(this.mediaElement);
-		this.element.appendChild(this.infoElement);
+		if (this.infoElement) {
+			this.element.appendChild(this.infoElement);
+		}
 
 		this.attachEvents(options);
 	}
@@ -42,10 +48,17 @@ export class FileCard {
 		const doc = getActiveDocument(this.app);
 		const element = doc.createElement(options.mediaTag);
 		element.className = 'mg-media-element';
+
 		Object.entries(options.mediaAttributes).forEach(([key, value]) => {
 			element.setAttribute(key, value);
 		});
-		(element as HTMLMediaElement | HTMLImageElement).src = options.resourcePath;
+
+		if (options.deferSource) {
+			element.dataset.src = options.resourcePath;
+		} else {
+			(element as HTMLMediaElement | HTMLImageElement).src = options.resourcePath;
+		}
+
 		return element;
 	}
 

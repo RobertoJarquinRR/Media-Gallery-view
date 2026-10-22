@@ -1,4 +1,4 @@
-import { GalleryProcessor, GalleryFile } from './types';
+import { GalleryProcessor, GalleryFile, GalleryRenderOptions } from './types';
 import { App } from 'obsidian';
 
 export class GalleryRegistry {
@@ -32,7 +32,8 @@ export class GalleryRegistry {
 		type: string,
 		files: GalleryFile[],
 		container: HTMLElement,
-		app: App
+		app: App,
+		options: GalleryRenderOptions
 	): Promise<void> {
 		const processor = this.get(type);
 		if (!processor) {
@@ -41,7 +42,7 @@ export class GalleryRegistry {
 				`No gallery processor registered for type: "${type}". Available: ${available}`
 			);
 		}
-		processor.process(files, container, app);
+		processor.process(files, container, app, options);
 	}
 
 	destroyAll(): void {

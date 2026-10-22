@@ -5,12 +5,13 @@
 }
 
 .mg-file-card {
-	height: 290px;
+	height: var(--mg-card-height, 290px);
 	flex: 1 0 auto;
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
 	cursor: pointer;
+	background-color: var(--background-secondary);
 }
 
 .mg-file-card .mg-media-element {

@@ -5,7 +5,7 @@ const TYPE_KEY = 'type:';
 
 export function parseGallerySource(source: string): ParsedGallerySource {
 	const lines = source.split(/\r?\n/);
-	const config: GalleryConfig = { path: '', type: 'video' };
+	const config: GalleryConfig = { path: '', type: '' };
 
 	for (const line of lines) {
 		const trimmed = line.trim();
@@ -28,10 +28,6 @@ export function validateConfig(config: GalleryConfig): string[] {
 
 	if (!config.path || config.path.trim() === '') {
 		errors.push('Path is required');
-	}
-
-	if (!config.type || config.type.trim() === '') {
-		errors.push('Type is required');
 	}
 
 	return errors;

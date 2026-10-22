@@ -1,4 +1,4 @@
-import { GalleryProcessor, GalleryFile } from '../core/types';
+import { GalleryProcessor, GalleryFile, GalleryRenderOptions } from '../core/types';
 import { App, TFile } from 'obsidian';
 import { FileCard, FileCardOptions } from '../ui/FileCard';
 import { GalleryGrid } from '../ui/GalleryGrid';
@@ -7,32 +7,46 @@ export class VideoGallery implements GalleryProcessor {
 	readonly supportedType = 'video';
 	readonly supportedExtensions = ['mkv', 'mov', 'mp4', 'ogv', 'webm'] as const;
 
-	private grid!: GalleryGrid;
+	private grid: GalleryGrid | null = null;
 
-	process(files: GalleryFile[], container: HTMLElement, app: App): void {
-		this.grid = new GalleryGrid('mg-gallery-grid', container.ownerDocument);
+	process(
+		files: GalleryFile[],
+		container: HTMLElement,
+		app: App,
+		options: GalleryRenderOptions
+	): void {
+		this.grid?.destroy();
+		this.grid = new GalleryGrid(
+			'mg-gallery-grid',
+			container.ownerDocument,
+			options.cardHeight
+		);
+
 		container.innerHTML = '';
 		container.appendChild(this.grid.getElement());
 
-		const videoFiles = files.filter((f) =>
-			this.supportedExtensions.includes(f.file.extension as typeof this.supportedExtensions[number])
-		);
-
-		if (videoFiles.length === 0) {
+		if (files.length === 0) {
 			this.grid.showEmptyMessage('Video not found');
 			return;
 		}
 
-		for (const file of videoFiles) {
+		const mediaAttributes: Record<string, string> = {
+			preload: 'none',
+			playsinline: 'true',
+		};
+		if (options.videoControls) mediaAttributes.controls = 'true';
+		if (options.videoMuted) mediaAttributes.muted = 'true';
+		if (options.videoAutoplay) mediaAttributes.autoplay = 'true';
+		if (options.videoLoop) mediaAttributes.loop = 'true';
+
+		for (const file of files) {
 			const cardOptions: FileCardOptions = {
 				file: file.file,
 				resourcePath: file.resourcePath,
 				mediaTag: 'video',
-				mediaAttributes: {
-					controls: 'true',
-					muted: 'true',
-					preload: 'auto',
-				},
+				mediaAttributes,
+				showFileName: options.showFileNames,
+				deferSource: true,
 				onDoubleClick: (file: TFile) => {
 					void app.workspace.openLinkText(file.path, '', true);
 				},
@@ -41,9 +55,12 @@ export class VideoGallery implements GalleryProcessor {
 			const card = new FileCard(app, cardOptions);
 			this.grid.addCard(card.getElement());
 		}
+
+		this.grid.lazyLoadMedia();
 	}
 
 	destroy(): void {
-		this.grid.destroy();
+		this.grid?.destroy();
+		this.grid = null;
 	}
 }

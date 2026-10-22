@@ -14,7 +14,11 @@ import {
 import { VideoGallery } from './galleries/VideoGallery';
 import { ImageGallery } from './galleries/ImageGallery';
 
-import { SettingsManager, MediaGallerySettingTab } from './settings/SettingsManager';
+import {
+	SettingsManager,
+	MediaGallerySettingTab,
+	MediaGallerySettings,
+} from './settings/SettingsManager';
 
 export default class MediaGallery extends Plugin {
 	private registry!: GalleryRegistry;
@@ -41,11 +45,8 @@ export default class MediaGallery extends Plugin {
 	}
 
 	private registerProcessors(): void {
-		const videoGallery = new VideoGallery();
-		const imageGallery = new ImageGallery(this.app);
-
-		this.registry.register(videoGallery);
-		this.registry.register(imageGallery);
+		this.registry.register(new VideoGallery());
+		this.registry.register(new ImageGallery(this.app));
 	}
 
 	private registerMarkdownProcessor(): void {
@@ -74,23 +75,53 @@ export default class MediaGallery extends Plugin {
 			return;
 		}
 
-		const processor = this.registry.get(config.type);
+		const settings = this.settingsManager.getSettings();
+		const type = config.type || settings.defaultType;
+		const processor = this.registry.get(type);
+
 		if (!processor) {
 			const available = this.registry.getSupportedTypes().join(', ');
 			container.createEl('p', {
-				text: `Unknown gallery type: "${config.type}". Available: ${available}`,
+				text: `Unknown gallery type: "${type}". Available: ${available}`,
 			});
 			return;
 		}
 
-		const files = this.fileScanner.scan(config.path, processor.supportedExtensions);
+		const extensions = this.resolveExtensions(
+			type,
+			processor.supportedExtensions,
+			settings
+		);
+		const files = this.fileScanner.scan(config.path, extensions, settings.sortOrder);
 
 		if (files.length === 0) {
-			container.createEl('p', { text: `No ${config.type} files found in: ${config.path}` });
+			container.createEl('p', { text: `No ${type} files found in: ${config.path}` });
 			return;
 		}
 
-		processor.process(files, container, this.app);
+		processor.process(files, container, this.app, {
+			cardHeight: settings.cardHeight,
+			showFileNames: settings.showFileNames,
+			videoControls: settings.videoControls,
+			videoMuted: settings.videoMuted,
+			videoAutoplay: settings.videoAutoplay,
+			videoLoop: settings.videoLoop,
+		});
+	}
+
+	private resolveExtensions(
+		type: string,
+		fallback: readonly string[],
+		settings: MediaGallerySettings
+	): readonly string[] {
+		const configured =
+			type === 'video'
+				? settings.videoExtensions
+				: type === 'image'
+					? settings.imageExtensions
+					: [];
+
+		return configured.length > 0 ? configured : fallback;
 	}
 
 	private registerSettingsTab(): void {

@@ -1,19 +1,30 @@
 import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { SortOrder } from '../core/types';
 
 export interface MediaGallerySettings {
 	videoExtensions: string[];
 	imageExtensions: string[];
 	defaultType: 'video' | 'image';
-	gridColumns: number;
-	enableLazyLoad: boolean;
+	sortOrder: SortOrder;
+	cardHeight: number;
+	showFileNames: boolean;
+	videoControls: boolean;
+	videoMuted: boolean;
+	videoAutoplay: boolean;
+	videoLoop: boolean;
 }
 
 export const DEFAULT_SETTINGS: MediaGallerySettings = {
 	videoExtensions: ['mkv', 'mov', 'mp4', 'ogv', 'webm'],
 	imageExtensions: ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'],
 	defaultType: 'video',
-	gridColumns: 4,
-	enableLazyLoad: true,
+	sortOrder: 'name-asc',
+	cardHeight: 290,
+	showFileNames: true,
+	videoControls: true,
+	videoMuted: true,
+	videoAutoplay: false,
+	videoLoop: false,
 };
 
 export class SettingsManager {
@@ -57,74 +68,138 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		const settings = this.manager.getSettings();
+		const update = async (partial: Partial<MediaGallerySettings>) => {
+			this.manager.updateSettings(partial);
+			await this.manager.save();
+		};
+
+		new Setting(containerEl).setName('Gallery defaults').setHeading();
 
 		new Setting(containerEl)
 			.setName('Default gallery type')
-			.setDesc('Type used when not specified in the code block')
+			.setDesc('Type used when the code block does not specify one')
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOption('video', 'Video')
 					.addOption('image', 'Image')
 					.setValue(settings.defaultType)
 					.onChange(async (value) => {
-						this.manager.updateSettings({ defaultType: value as 'video' | 'image' });
-						await this.manager.save();
+						await update({ defaultType: value as 'video' | 'image' });
+					})
+			);
+
+		new Setting(containerEl)
+			.setName('Sort order')
+			.setDesc('Order of the files inside the gallery')
+			.addDropdown((dropdown) =>
+				dropdown
+					.addOption('name-asc', 'Name, ascending')
+					.addOption('name-desc', 'Name, descending')
+					.addOption('mtime-desc', 'Modified, newest first')
+					.addOption('mtime-asc', 'Modified, oldest first')
+					.addOption('size-desc', 'Size, largest first')
+					.addOption('size-asc', 'Size, smallest first')
+					.setValue(settings.sortOrder)
+					.onChange(async (value) => {
+						await update({ sortOrder: value as SortOrder });
 					})
 			);
 
 		new Setting(containerEl)
 			.setName('Video extensions')
-			.setDesc('Comma-separated list of video file extensions')
-			.addText((text) =>
+			.setDesc(
+				'Comma-separated list. This filters files, it does not add playback support: the file must also be decodable by Obsidian'
+			)
+			.addTextArea((text) =>
 				text
 					.setPlaceholder('Mkv, mov, mp4, ogv, webm')
 					.setValue(settings.videoExtensions.join(', '))
 					.onChange(async (value) => {
-						this.manager.updateSettings({
-							videoExtensions: value.split(',').map((s) => s.trim().toLowerCase()),
+						await update({
+							videoExtensions: value
+								.split(',')
+								.map((s) => s.trim().toLowerCase().replace(/^\./, ''))
+								.filter((s) => s.length > 0),
 						});
-						await this.manager.save();
 					})
 			);
 
 		new Setting(containerEl)
 			.setName('Image extensions')
 			.setDesc('Comma-separated list of image file extensions')
-			.addText((text) =>
+			.addTextArea((text) =>
 				text
 					.setPlaceholder('Avif, bmp, GIF, JPEG, JPG, PNG, SVG, webp')
 					.setValue(settings.imageExtensions.join(', '))
 					.onChange(async (value) => {
-						this.manager.updateSettings({
-							imageExtensions: value.split(',').map((s) => s.trim().toLowerCase()),
+						await update({
+							imageExtensions: value
+								.split(',')
+								.map((s) => s.trim().toLowerCase().replace(/^\./, ''))
+								.filter((s) => s.length > 0),
 						});
-						await this.manager.save();
 					})
 			);
 
+		new Setting(containerEl).setName('Appearance').setHeading();
+
 		new Setting(containerEl)
-			.setName('Grid columns')
-			.setDesc('Number of columns in the gallery grid')
+			.setName('Card height')
+			.setDesc('Height of each row of cards, in pixels')
 			.addSlider((slider) =>
 				slider
-					.setLimits(1, 8, 1)
-					.setValue(settings.gridColumns)
+					.setLimits(150, 500, 10)
+					.setValue(settings.cardHeight)
 					.onChange(async (value) => {
-						this.manager.updateSettings({ gridColumns: value });
-						await this.manager.save();
+						await update({ cardHeight: value });
 					})
 			);
 
 		new Setting(containerEl)
-			.setName('Enable lazy loading')
-			.setDesc('Load media only when visible in viewport')
+			.setName('Show file names')
+			.setDesc('Display the file name below each card')
 			.addToggle((toggle) =>
-				toggle
-					.setValue(settings.enableLazyLoad)
-					.onChange(async (value) => {
-						this.manager.updateSettings({ enableLazyLoad: value });
-						await this.manager.save();
-					})
+				toggle.setValue(settings.showFileNames).onChange(async (value) => {
+					await update({ showFileNames: value });
+				})
+			);
+
+		new Setting(containerEl).setName('Video').setHeading();
+
+		new Setting(containerEl)
+			.setName('Show controls')
+			.setDesc('Show the native playback controls (they appear on hover)')
+			.addToggle((toggle) =>
+				toggle.setValue(settings.videoControls).onChange(async (value) => {
+					await update({ videoControls: value });
+				})
+			);
+
+		new Setting(containerEl)
+			.setName('Muted by default')
+			.setDesc('Start videos without sound')
+			.addToggle((toggle) =>
+				toggle.setValue(settings.videoMuted).onChange(async (value) => {
+					await update({ videoMuted: value });
+				})
+			);
+
+		new Setting(containerEl)
+			.setName('Autoplay')
+			.setDesc('Browsers only allow autoplay when the video is muted')
+			.addToggle((toggle) =>
+				toggle.setValue(settings.videoAutoplay).onChange(async (value) => {
+					await update({ videoAutoplay: value });
+				})
+			);
+
+		new Setting(containerEl)
+			.setName('Loop')
+			.setDesc('Restart videos when they reach the end')
+			.addToggle((toggle) =>
+				toggle.setValue(settings.videoLoop).onChange(async (value) => {
+					await update({ videoLoop: value });
+				})
 			);
 	}
 }

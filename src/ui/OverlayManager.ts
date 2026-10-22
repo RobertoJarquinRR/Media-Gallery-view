@@ -12,7 +12,7 @@ export class OverlayManager {
 	}
 
 	private getDocument(): Document {
-		return this.app.workspace.containerEl?.ownerDocument ?? document;
+		return this.app.workspace.containerEl?.ownerDocument ?? activeDocument;
 	}
 
 	open(file: TFile, mediaTag: string): void {
