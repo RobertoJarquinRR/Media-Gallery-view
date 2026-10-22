@@ -61,6 +61,8 @@ export class VideoGallery implements GalleryProcessor {
 			overlayAttributes.loop = 'true';
 		}
 
+		const gridElement = this.grid.getElement();
+
 		this.overlay.setOptions({
 			arrowsVisible: options.overlayArrows,
 			onArrowsVisibleChange: options.onOverlayArrowsChange,
@@ -80,6 +82,10 @@ export class VideoGallery implements GalleryProcessor {
 					if (event.clientY > bounds.bottom - 40) {
 						return;
 					}
+
+					event.preventDefault();
+					this.pauseVideos(gridElement);
+
 					const index = files.findIndex(
 						(item) => item.file.path === clicked.path
 					);
@@ -93,6 +99,10 @@ export class VideoGallery implements GalleryProcessor {
 			const card = new FileCard(app, cardOptions);
 			this.grid.addCard(card.getElement());
 		}
+	}
+
+	private pauseVideos(root: HTMLElement): void {
+		root.querySelectorAll('video').forEach((video) => video.pause());
 	}
 
 	destroy(): void {
