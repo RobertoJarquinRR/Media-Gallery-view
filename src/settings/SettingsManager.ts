@@ -1,5 +1,18 @@
-import { App, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import {
+	App,
+	Plugin,
+	PluginSettingTab,
+	Setting,
+	SettingDefinitionItem,
+} from 'obsidian';
 import { SortOrder } from '../core/types';
+
+const EXTENSION_KEYS = new Set([
+	'videoExtensions',
+	'imageExtensions',
+	'pdfExtensions',
+	'audioExtensions',
+]);
 
 export interface MediaGallerySettings {
 	videoExtensions: string[];
@@ -81,6 +94,192 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 	constructor(app: App, plugin: Plugin, manager: SettingsManager) {
 		super(app, plugin);
 		this.manager = manager;
+	}
+
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		return [
+			{
+				type: 'group',
+				heading: 'Gallery defaults',
+				items: [
+					{
+						name: 'Default gallery type',
+						desc: 'Type used when the code block does not specify one',
+						control: {
+							type: 'dropdown',
+							key: 'defaultType',
+							options: {
+								video: 'Video',
+								image: 'Image',
+								pdf: 'PDF',
+								audio: 'Audio',
+							},
+						},
+					},
+					{
+						name: 'Sort order',
+						desc: 'Order of the files inside the gallery',
+						control: {
+							type: 'dropdown',
+							key: 'sortOrder',
+							options: {
+								'name-asc': 'Name, ascending',
+								'name-desc': 'Name, descending',
+								'mtime-desc': 'Modified, newest first',
+								'mtime-asc': 'Modified, oldest first',
+								'size-desc': 'Size, largest first',
+								'size-asc': 'Size, smallest first',
+							},
+						},
+					},
+					{
+						name: 'Video extensions',
+						desc: 'Comma-separated list. This filters files, it does not add playback support: the file must also be decodable by Obsidian',
+						control: {
+							type: 'textarea',
+							key: 'videoExtensions',
+							placeholder: 'Mkv, mov, mp4, ogv, webm',
+						},
+					},
+					{
+						name: 'Image extensions',
+						desc: 'Comma-separated list of image file extensions',
+						control: {
+							type: 'textarea',
+							key: 'imageExtensions',
+							placeholder: 'Avif, bmp, GIF, JPEG, JPG, PNG, SVG, webp',
+						},
+					},
+					{
+						name: 'PDF extensions',
+						desc: 'Comma-separated list of PDF file extensions',
+						control: {
+							type: 'textarea',
+							key: 'pdfExtensions',
+							placeholder: 'PDF',
+						},
+					},
+					{
+						name: 'Audio extensions',
+						desc: 'Comma-separated list of audio file extensions',
+						control: {
+							type: 'textarea',
+							key: 'audioExtensions',
+							placeholder:
+								'Mp3, flac, ogg, oga, m4a, wav, aac, opus, wma, aiff, aif',
+						},
+					},
+					{
+						name: 'Open files with',
+						desc: 'Where the open button and double-click send files: a new Obsidian tab or the system default app',
+						control: {
+							type: 'dropdown',
+							key: 'openWith',
+							options: {
+								obsidian: 'Obsidian tab',
+								system: 'System default app',
+							},
+						},
+					},
+				],
+			},
+			{
+				type: 'group',
+				heading: 'Appearance',
+				items: [
+					{
+						name: 'Card height',
+						desc: 'Height of each row of cards, in pixels',
+						control: {
+							type: 'slider',
+							key: 'cardHeight',
+							min: 150,
+							max: 500,
+							step: 10,
+						},
+					},
+					{
+						name: 'Show file names',
+						desc: 'Display the file name below each card',
+						control: { type: 'toggle', key: 'showFileNames' },
+					},
+					{
+						name: 'Overlay arrows',
+						desc: 'Show the side arrows in the image overlay. Tapping the edges always navigates',
+						control: { type: 'toggle', key: 'overlayArrows' },
+					},
+					{
+						name: 'Custom thumbnail folder',
+						desc: 'Vault folder with your own thumbnails. Files are matched by name: clip.pdf uses clip.png',
+						control: {
+							type: 'text',
+							key: 'thumbnailFolder',
+							placeholder: 'Attachments/thumbnails',
+						},
+					},
+				],
+			},
+			{
+				type: 'group',
+				heading: 'Video',
+				items: [
+					{
+						name: 'Show controls',
+						desc: 'Show the native playback controls (they appear on hover)',
+						control: { type: 'toggle', key: 'videoControls' },
+					},
+					{
+						name: 'Muted by default',
+						desc: 'Start videos without sound',
+						control: { type: 'toggle', key: 'videoMuted' },
+					},
+					{
+						name: 'Autoplay',
+						desc: 'Browsers only allow autoplay when the video is muted',
+						control: { type: 'toggle', key: 'videoAutoplay' },
+					},
+					{
+						name: 'Loop',
+						desc: 'Restart videos when they reach the end',
+						control: { type: 'toggle', key: 'videoLoop' },
+					},
+				],
+			},
+			{
+				type: 'group',
+				heading: 'Audio',
+				items: [
+					{
+						name: 'Autoplay',
+						desc: 'Start playing the first track automatically when opening the overlay',
+						control: { type: 'toggle', key: 'audioAutoplay' },
+					},
+				],
+			},
+		];
+	}
+
+	getControlValue(key: string): unknown {
+		const settings = this.manager.getSettings() as unknown as Record<
+			string,
+			unknown
+		>;
+		const value = settings[key];
+		return Array.isArray(value) ? value.join(', ') : value;
+	}
+
+	async setControlValue(key: string, value: unknown): Promise<void> {
+		const raw = typeof value === 'string' ? value : '';
+		let next: unknown = value;
+
+		if (EXTENSION_KEYS.has(key)) {
+			next = parseExtensions(raw);
+		} else if (key === 'thumbnailFolder') {
+			next = raw.trim();
+		}
+
+		this.manager.updateSettings({ [key]: next });
+		await this.manager.save();
 	}
 
 	display(): void {
