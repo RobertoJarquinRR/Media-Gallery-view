@@ -1,4 +1,4 @@
-import { App, normalizePath, Notice, Plugin, TFile } from 'obsidian';
+import { App, normalizePath, Notice, Plugin, TFile, TFolder } from 'obsidian';
 import {
 	ThumbnailInfo,
 	ThumbnailKind,
@@ -578,20 +578,30 @@ export class ThumbnailService implements ThumbnailResolver {
 
 		if (!this.customFolder || this.destroyed) return;
 
-		const prefix = `${this.customFolder}/`;
-		const files = this.app.vault
-			.getFiles()
-			.filter(
-				(file) =>
-					file.path.startsWith(prefix) &&
-					IMAGE_EXTENSIONS.has(file.extension.toLowerCase())
-			)
-			.sort((a, b) => {
-				const priority =
-					imagePriority(a.extension) - imagePriority(b.extension);
-				if (priority !== 0) return priority;
-				return a.path.localeCompare(b.path);
-			});
+		const root = this.app.vault.getAbstractFileByPath(this.customFolder);
+		if (!(root instanceof TFolder)) return;
+
+		const candidates: TFile[] = [];
+		const collect = (folder: TFolder): void => {
+			for (const child of folder.children) {
+				if (child instanceof TFolder) {
+					collect(child);
+				} else if (
+					child instanceof TFile &&
+					IMAGE_EXTENSIONS.has(child.extension.toLowerCase())
+				) {
+					candidates.push(child);
+				}
+			}
+		};
+		collect(root);
+
+		const files = candidates.sort((a, b) => {
+			const priority =
+				imagePriority(a.extension) - imagePriority(b.extension);
+			if (priority !== 0) return priority;
+			return a.path.localeCompare(b.path);
+		});
 
 		for (const file of files) {
 			const key = file.basename.toLowerCase();

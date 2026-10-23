@@ -1,4 +1,4 @@
-import { App, Platform, TFile } from 'obsidian';
+import { App, Platform, TFile, TFolder } from 'obsidian';
 import * as mm from 'music-metadata';
 import {
 	encodeImageBuffer,
@@ -88,7 +88,7 @@ export async function generateAudioThumbnail(
 		if (encoded) return encoded;
 	}
 
-	const cover = findFolderCover(app, file);
+	const cover = findFolderCover(file);
 	if (cover) {
 		return generateImageThumbnail(app, cover, targetSize, AUDIO_QUALITY);
 	}
@@ -225,22 +225,21 @@ async function canDecode(picture: Picture): Promise<boolean> {
 
 const folderCoverCache = new Map<string, TFile | null>();
 
-function findFolderCover(app: App, file: TFile): TFile | null {
-	const folder = file.parent?.path ?? '';
+function findFolderCover(file: TFile): TFile | null {
+	const folder = file.parent;
+	if (!(folder instanceof TFolder)) return null;
 
-	const cached = folderCoverCache.get(folder);
+	const cached = folderCoverCache.get(folder.path);
 	if (cached !== undefined) return cached;
 
-	const candidates = app.vault
-		.getFiles()
-		.filter(
-			(candidate) =>
-				(candidate.parent?.path ?? '') === folder &&
-				COVER_EXTENSIONS.has(candidate.extension.toLowerCase())
-		);
+	const candidates = folder.children.filter(
+		(child): child is TFile =>
+			child instanceof TFile &&
+			COVER_EXTENSIONS.has(child.extension.toLowerCase())
+	);
 
 	if (candidates.length === 0) {
-		folderCoverCache.set(folder, null);
+		folderCoverCache.set(folder.path, null);
 		return null;
 	}
 
@@ -250,7 +249,7 @@ function findFolderCover(app: App, file: TFile): TFile | null {
 				candidate.basename.toLowerCase().replace(/[\s_-]/g, '') === name
 		);
 		if (match) {
-			folderCoverCache.set(folder, match);
+			folderCoverCache.set(folder.path, match);
 			return match;
 		}
 	}
@@ -260,7 +259,7 @@ function findFolderCover(app: App, file: TFile): TFile | null {
 			/(cover|folder|front|album|artwork)/i.test(candidate.basename)
 		) ?? null;
 
-	folderCoverCache.set(folder, loose);
+	folderCoverCache.set(folder.path, loose);
 	return loose;
 }
 

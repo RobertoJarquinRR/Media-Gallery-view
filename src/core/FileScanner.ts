@@ -1,4 +1,4 @@
-import { TFile } from 'obsidian';
+import { TFile, TFolder } from 'obsidian';
 import { GalleryFile, FileScannerOptions, SortOrder } from './types';
 
 export class FileScanner {
@@ -17,43 +17,48 @@ export class FileScanner {
 		excludePaths: readonly string[] = []
 	): GalleryFile[] {
 		const normalizedPath = this.normalizePath(path);
-		const allFiles = this.vault.getFiles();
+		const root = this.vault.getAbstractFileByPath(normalizedPath);
+		if (!(root instanceof TFolder)) return [];
 
-		return allFiles
-			.filter(
-				(file: TFile) =>
-					file.path.startsWith(normalizedPath) &&
-					extensions.includes(file.extension) &&
-					!this.isExcluded(file, excludePaths)
-			)
+		const files: TFile[] = [];
+		this.collect(root, extensions, excludePaths, files);
+
+		return files
 			.sort((a, b) => this.compare(a, b, sortOrder))
-			.map((file: TFile) => ({
+			.map((file) => ({
 				file,
 				resourcePath: this.vault.getResourcePath(file),
 			}));
 	}
 
-	scanAll(path: string, sortOrder: SortOrder = 'name-asc'): GalleryFile[] {
-		const normalizedPath = this.normalizePath(path);
-		const allFiles = this.vault.getFiles();
+	private collect(
+		folder: TFolder,
+		extensions: readonly string[],
+		excludePaths: readonly string[],
+		files: TFile[]
+	): void {
+		for (const child of folder.children) {
+			if (this.isExcluded(child.path, excludePaths)) continue;
 
-		return allFiles
-			.filter((file: TFile) => file.path.startsWith(normalizedPath))
-			.sort((a, b) => this.compare(a, b, sortOrder))
-			.map((file: TFile) => ({
-				file,
-				resourcePath: this.vault.getResourcePath(file),
-			}));
+			if (child instanceof TFolder) {
+				this.collect(child, extensions, excludePaths, files);
+				continue;
+			}
+
+			if (
+				child instanceof TFile &&
+				extensions.includes(child.extension.toLowerCase())
+			) {
+				files.push(child);
+			}
+		}
 	}
 
-	private isExcluded(file: TFile, excludePaths: readonly string[]): boolean {
+	private isExcluded(path: string, excludePaths: readonly string[]): boolean {
 		return excludePaths.some((excluded) => {
 			const normalized = this.normalizePath(excluded).replace(/\/+$/, '');
 			if (!normalized) return false;
-			return (
-				file.path === normalized ||
-				file.path.startsWith(`${normalized}/`)
-			);
+			return path === normalized || path.startsWith(`${normalized}/`);
 		});
 	}
 
