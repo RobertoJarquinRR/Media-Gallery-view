@@ -14,6 +14,7 @@ import {
 import { VideoGallery } from './galleries/VideoGallery';
 import { ImageGallery } from './galleries/ImageGallery';
 import { PdfGallery } from './galleries/PdfGallery';
+import { AudioGallery } from './galleries/AudioGallery';
 import { ThumbnailService } from './thumbnails/ThumbnailService';
 import { disposePdfWorker } from './thumbnails/pdfWorker';
 
@@ -53,9 +54,10 @@ export default class MediaGallery extends Plugin {
 	}
 
 	private registerProcessors(): void {
-		this.registry.register(new VideoGallery(this.app));
-		this.registry.register(new ImageGallery(this.app));
+		this.registry.register(new VideoGallery(this.app, this.settingsManager));
+		this.registry.register(new ImageGallery(this.app, this.settingsManager));
 		this.registry.register(new PdfGallery(this.app, this.settingsManager));
+		this.registry.register(new AudioGallery(this.app, this.settingsManager));
 	}
 
 	private registerMarkdownProcessor(): void {
@@ -121,6 +123,7 @@ export default class MediaGallery extends Plugin {
 			videoMuted: settings.videoMuted,
 			videoAutoplay: settings.videoAutoplay,
 			videoLoop: settings.videoLoop,
+			audioAutoplay: settings.audioAutoplay,
 			overlayArrows: settings.overlayArrows,
 			onOverlayArrowsChange: (visible: boolean) => {
 				void this.saveOverlayArrows(visible);
@@ -151,7 +154,9 @@ export default class MediaGallery extends Plugin {
 					? settings.imageExtensions
 					: type === 'pdf'
 						? settings.pdfExtensions
-						: [];
+						: type === 'audio'
+							? settings.audioExtensions
+							: [];
 
 		return configured.length > 0 ? configured : fallback;
 	}

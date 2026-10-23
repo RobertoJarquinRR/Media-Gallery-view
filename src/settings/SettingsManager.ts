@@ -5,9 +5,10 @@ export interface MediaGallerySettings {
 	videoExtensions: string[];
 	imageExtensions: string[];
 	pdfExtensions: string[];
-	pdfOpenWith: 'obsidian' | 'system';
+	audioExtensions: string[];
+	openWith: 'obsidian' | 'system';
 	thumbnailFolder: string;
-	defaultType: 'video' | 'image' | 'pdf';
+	defaultType: 'video' | 'image' | 'pdf' | 'audio';
 	sortOrder: SortOrder;
 	cardHeight: number;
 	showFileNames: boolean;
@@ -15,6 +16,7 @@ export interface MediaGallerySettings {
 	videoMuted: boolean;
 	videoAutoplay: boolean;
 	videoLoop: boolean;
+	audioAutoplay: boolean;
 	overlayArrows: boolean;
 }
 
@@ -22,7 +24,8 @@ export const DEFAULT_SETTINGS: MediaGallerySettings = {
 	videoExtensions: ['mkv', 'mov', 'mp4', 'ogv', 'webm'],
 	imageExtensions: ['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp'],
 	pdfExtensions: ['pdf'],
-	pdfOpenWith: 'obsidian',
+	audioExtensions: ['mp3', 'flac', 'ogg', 'oga', 'm4a', 'wav', 'aac', 'opus', 'wma', 'aiff', 'aif'],
+	openWith: 'obsidian',
 	thumbnailFolder: '',
 	defaultType: 'video',
 	sortOrder: 'mtime-desc',
@@ -32,6 +35,7 @@ export const DEFAULT_SETTINGS: MediaGallerySettings = {
 	videoMuted: true,
 	videoAutoplay: false,
 	videoLoop: false,
+	audioAutoplay: false,
 	overlayArrows: true,
 };
 
@@ -45,8 +49,16 @@ export class SettingsManager {
 	}
 
 	async load(): Promise<MediaGallerySettings> {
-		const loaded = (await this.plugin.loadData()) as Partial<MediaGallerySettings> | null;
-		this.settings = { ...DEFAULT_SETTINGS, ...loaded };
+		const loaded = (await this.plugin.loadData()) as
+			| (Partial<MediaGallerySettings> & { pdfOpenWith?: 'obsidian' | 'system' })
+			| null;
+		const { pdfOpenWith, ...rest } = loaded ?? {};
+		this.settings = { ...DEFAULT_SETTINGS, ...rest };
+
+		if (loaded && loaded.openWith === undefined && pdfOpenWith) {
+			this.settings.openWith = pdfOpenWith;
+		}
+
 		return this.settings;
 	}
 
@@ -91,10 +103,11 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 					.addOption('video', 'Video')
 					.addOption('image', 'Image')
 					.addOption('pdf', 'PDF')
+					.addOption('audio', 'Audio')
 					.setValue(settings.defaultType)
 					.onChange(async (value) => {
 						await update({
-							defaultType: value as 'video' | 'image' | 'pdf',
+							defaultType: value as 'video' | 'image' | 'pdf' | 'audio',
 						});
 					})
 			);
@@ -167,18 +180,32 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName('Open PDF files on double-click')
+			.setName('Audio extensions')
+			.setDesc('Comma-separated list of audio file extensions')
+			.addTextArea((text) =>
+				text
+					.setPlaceholder('Mp3, flac, ogg, oga, m4a, wav, aac, opus, wma, aiff, aif')
+					.setValue(settings.audioExtensions.join(', '))
+					.onChange(async (value) => {
+						await update({
+							audioExtensions: parseExtensions(value),
+						});
+					})
+			);
+
+		new Setting(containerEl)
+			.setName('Open files with')
 			.setDesc(
-				'Double-clicking a PDF opens it in a new Obsidian tab or with the system default app'
+				'Where the open button and double-click send files: a new Obsidian tab or the system default app'
 			)
 			.addDropdown((dropdown) =>
 				dropdown
 					.addOption('obsidian', 'Obsidian tab')
 					.addOption('system', 'System default app')
-					.setValue(settings.pdfOpenWith)
+					.setValue(settings.openWith)
 					.onChange(async (value) => {
 						await update({
-							pdfOpenWith: value as 'obsidian' | 'system',
+							openWith: value as 'obsidian' | 'system',
 						});
 					})
 			);
@@ -266,6 +293,17 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 			.addToggle((toggle) =>
 				toggle.setValue(settings.videoLoop).onChange(async (value) => {
 					await update({ videoLoop: value });
+				})
+			);
+
+		new Setting(containerEl).setName('Audio').setHeading();
+
+		new Setting(containerEl)
+			.setName('Autoplay')
+			.setDesc('Start playing the first track automatically when opening the overlay')
+			.addToggle((toggle) =>
+				toggle.setValue(settings.audioAutoplay).onChange(async (value) => {
+					await update({ audioAutoplay: value });
 				})
 			);
 	}

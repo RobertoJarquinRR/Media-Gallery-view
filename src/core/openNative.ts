@@ -19,3 +19,18 @@ export function openFileNative(app: App, file: TFile): void {
 
 	void app.workspace.openLinkText(file.path, '', true);
 }
+
+export type OpenTarget = 'obsidian' | 'system';
+
+export function openMediaFile(
+	app: App,
+	file: TFile,
+	target: OpenTarget
+): void {
+	if (target === 'system') {
+		openFileNative(app, file);
+		return;
+	}
+
+	openFileInObsidian(app, file);
+}
