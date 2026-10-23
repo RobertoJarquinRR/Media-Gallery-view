@@ -1,14 +1,31 @@
 import { App, normalizePath, Notice, Plugin, TFile } from 'obsidian';
-import { ThumbnailInfo, ThumbnailKind, ThumbnailResolver } from '../core/types';
+import {
+	ThumbnailInfo,
+	ThumbnailKind,
+	ThumbnailPriority,
+	ThumbnailResolver,
+} from '../core/types';
 import { generatePdfThumbnail } from './PdfThumbnailProvider';
+import { generateAudioThumbnail } from './AudioThumbnailProvider';
+import {
+	generateImagePreview,
+	generateImageThumbnail,
+} from './ImageThumbnailProvider';
+import { disposeImageWorkerPool } from './ImageWorkerPool';
 import { disposePdfWorker } from './pdfWorker';
 
 const CACHE_VERSION = 1;
 const CACHE_FILE = 'thumbnails.json';
 const CACHE_FOLDER = 'thumbnails';
 const THUMBNAIL_SIZE = 1600;
+const AUDIO_THUMBNAIL_SIZE = 1024;
+const IMAGE_THUMBNAIL_SIZE = 1024;
+const IMAGE_PREVIEW_SIZE = 192;
+const IMAGE_QUALITY = 0.82;
+const IMAGE_PREVIEW_QUALITY = 0.6;
 const FAILURE_TTL = 60 * 60 * 1000;
-const MAX_CONCURRENT_JOBS = 2;
+const MAX_CONCURRENT_JOBS = 4;
+const MAX_PREVIEWS = 600;
 
 const IMAGE_EXTENSIONS = new Set([
 	'avif',
@@ -57,9 +74,11 @@ export class ThumbnailService implements ThumbnailResolver {
 		{ info: ThumbnailInfo; mtime: number; size: number }
 	>();
 	private readonly pending = new Map<string, Promise<ThumbnailInfo | null>>();
+	private readonly previewPending = new Map<string, Promise<string | null>>();
+	private readonly previews = new Map<string, string>();
 	private readonly custom = new Map<string, TFile>();
 	private readonly blobUrls = new Set<string>();
-	private readonly queue: Array<() => void> = [];
+	private readonly queue: Array<{ run: () => void; priority: number }> = [];
 	private customFolder = '';
 	private activeJobs = 0;
 	private saveTimer: number | null = null;
@@ -107,7 +126,11 @@ export class ThumbnailService implements ThumbnailResolver {
 		this.rebuildCustomIndex();
 	}
 
-	async resolve(file: TFile, kind: ThumbnailKind): Promise<ThumbnailInfo | null> {
+	async resolve(
+		file: TFile,
+		kind: ThumbnailKind,
+		priority: ThumbnailPriority = 'normal'
+	): Promise<ThumbnailInfo | null> {
 		if (this.destroyed) return null;
 
 		const known = this.known.get(file.path);
@@ -120,12 +143,35 @@ export class ThumbnailService implements ThumbnailResolver {
 		}
 
 		const inFlight = this.pending.get(file.path);
-		if (inFlight) return inFlight;
+		if (inFlight) {
+			return inFlight;
+		}
 
-		const task = this.resolveFile(file, kind).finally(() => {
+		const task = this.resolveFile(file, kind, priority).finally(() => {
 			this.pending.delete(file.path);
 		});
 		this.pending.set(file.path, task);
+		return task;
+	}
+
+	async resolvePreview(file: TFile): Promise<string | null> {
+		if (this.destroyed) return null;
+
+		const known = this.getKnown(file);
+		if (known) return known.src;
+
+		const cached = this.previews.get(file.path);
+		if (cached) return cached;
+
+		if (this.pending.has(file.path)) return null;
+
+		const inFlight = this.previewPending.get(file.path);
+		if (inFlight) return inFlight;
+
+		const task = this.createPreview(file).finally(() => {
+			this.previewPending.delete(file.path);
+		});
+		this.previewPending.set(file.path, task);
 		return task;
 	}
 
@@ -156,16 +202,20 @@ export class ThumbnailService implements ThumbnailResolver {
 			URL.revokeObjectURL(url);
 		}
 		this.blobUrls.clear();
+		this.previews.clear();
+		this.previewPending.clear();
 		this.known.clear();
 		this.pending.clear();
 		this.queue.length = 0;
 
+		disposeImageWorkerPool();
 		disposePdfWorker();
 	}
 
 	private async resolveFile(
 		file: TFile,
-		kind: ThumbnailKind
+		kind: ThumbnailKind,
+		priority: ThumbnailPriority = 'normal'
 	): Promise<ThumbnailInfo | null> {
 		await this.ensureLoaded();
 
@@ -202,14 +252,17 @@ export class ThumbnailService implements ThumbnailResolver {
 
 		let generated: GeneratedFile | null = null;
 		try {
-			generated = await this.enqueue(() => this.generateThumbnail(file, kind));
+			generated = await this.enqueue(
+				() => this.generateThumbnail(file, kind),
+				priority
+			);
 		} catch (error) {
 			this.markFailure(file, error);
 			return null;
 		}
 
 		if (!generated) {
-			this.markFailure(file, new Error('Unsupported thumbnail type'));
+			this.markUnavailable(file);
 			return null;
 		}
 
@@ -245,17 +298,56 @@ export class ThumbnailService implements ThumbnailResolver {
 		file: TFile,
 		kind: ThumbnailKind
 	): Promise<GeneratedFile | null> {
-		if (kind !== 'pdf') return null;
+		if (kind === 'pdf') {
+			const thumb = await generatePdfThumbnail(this.app, file, THUMBNAIL_SIZE);
+			const path = `${this.generatedDir}/${hashPath(file.path)}.${thumb.extension}`;
 
-		const thumb = await generatePdfThumbnail(this.app, file, THUMBNAIL_SIZE);
-		const path = `${this.generatedDir}/${hashPath(file.path)}.${thumb.extension}`;
+			return {
+				data: thumb.data,
+				path,
+				width: thumb.width,
+				height: thumb.height,
+			};
+		}
 
-		return {
-			data: thumb.data,
-			path,
-			width: thumb.width,
-			height: thumb.height,
-		};
+		if (kind === 'audio') {
+			const thumb = await generateAudioThumbnail(
+				this.app,
+				file,
+				AUDIO_THUMBNAIL_SIZE
+			);
+			if (!thumb) return null;
+
+			const path = `${this.generatedDir}/${hashPath(file.path)}.${thumb.extension}`;
+
+			return {
+				data: thumb.data,
+				path,
+				width: thumb.width,
+				height: thumb.height,
+			};
+		}
+
+		if (kind === 'image') {
+			const thumb = await generateImageThumbnail(
+				this.app,
+				file,
+				IMAGE_THUMBNAIL_SIZE,
+				IMAGE_QUALITY
+			);
+			if (!thumb) return null;
+
+			const path = `${this.generatedDir}/${hashPath(file.path)}.${thumb.extension}`;
+
+			return {
+				data: thumb.data,
+				path,
+				width: thumb.width,
+				height: thumb.height,
+			};
+		}
+
+		return null;
 	}
 
 	private async toInfo(
@@ -353,6 +445,18 @@ export class ThumbnailService implements ThumbnailResolver {
 		);
 	}
 
+	private markUnavailable(file: TFile): void {
+		this.cache.entries[file.path] = {
+			mtime: file.stat.mtime,
+			size: file.stat.size,
+			file: '',
+			source: 'generated',
+			failedAt: Date.now(),
+			error: 'No thumbnail available',
+		};
+		this.scheduleSave();
+	}
+
 	private markFailure(file: TFile, error: unknown): void {
 		const message =
 			error instanceof Error
@@ -395,17 +499,32 @@ export class ThumbnailService implements ThumbnailResolver {
 		}
 	}
 
-	private enqueue<T>(job: () => Promise<T>): Promise<T> {
+	private enqueue<T>(
+		job: () => Promise<T>,
+		priority: ThumbnailPriority = 'normal'
+	): Promise<T> {
+		const weight = priorityWeight(priority);
+
 		return new Promise<T>((resolve, reject) => {
-			this.queue.push(() => {
-				this.activeJobs++;
-				job()
-					.then(resolve, reject)
-					.finally(() => {
-						this.activeJobs--;
-						this.drainQueue();
-					});
-			});
+			const entry = {
+				priority: weight,
+				run: () => {
+					this.activeJobs++;
+					job()
+						.then(resolve, reject)
+						.finally(() => {
+							this.activeJobs--;
+							this.drainQueue();
+						});
+				},
+			};
+
+			let index = this.queue.length;
+			while (index > 0 && (this.queue[index - 1]?.priority ?? 0) > weight) {
+				index -= 1;
+			}
+			this.queue.splice(index, 0, entry);
+
 			this.drainQueue();
 		});
 	}
@@ -413,7 +532,44 @@ export class ThumbnailService implements ThumbnailResolver {
 	private drainQueue(): void {
 		while (this.activeJobs < MAX_CONCURRENT_JOBS && this.queue.length > 0) {
 			const job = this.queue.shift();
-			job?.();
+			job?.run();
+		}
+	}
+
+	private async createPreview(file: TFile): Promise<string | null> {
+		try {
+			const generated = await this.enqueue(
+				() =>
+					generateImagePreview(
+						this.app,
+						file,
+						IMAGE_PREVIEW_SIZE,
+						IMAGE_PREVIEW_QUALITY
+					),
+				'normal'
+			);
+			if (!generated || this.destroyed) return null;
+
+			const url = URL.createObjectURL(
+				new Blob([generated.data], { type: 'image/webp' })
+			);
+			this.blobUrls.add(url);
+			this.previews.set(file.path, url);
+			this.trimPreviews();
+			return url;
+		} catch {
+			return null;
+		}
+	}
+
+	private trimPreviews(): void {
+		while (this.previews.size > MAX_PREVIEWS) {
+			const oldest = this.previews.entries().next();
+			if (oldest.done) return;
+			const [path, url] = oldest.value;
+			this.previews.delete(path);
+			this.blobUrls.delete(url);
+			URL.revokeObjectURL(url);
 		}
 	}
 
@@ -487,6 +643,17 @@ function hashPath(path: string): string {
 function imagePriority(extension: string): number {
 	const priority = IMAGE_PRIORITY.indexOf(extension.toLowerCase());
 	return priority === -1 ? IMAGE_PRIORITY.length : priority;
+}
+
+function priorityWeight(priority: ThumbnailPriority): number {
+	switch (priority) {
+		case 'high':
+			return 0;
+		case 'normal':
+			return 1;
+		default:
+			return 2;
+	}
 }
 
 function mimeType(path: string): string {

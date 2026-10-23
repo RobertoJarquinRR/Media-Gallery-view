@@ -26,6 +26,7 @@
 		"typescript-eslint": "^8.59.1"
 	},
 	"dependencies": {
+		"music-metadata": "^12.2.3",
 		"pdfjs-dist": "^4.10.38"
 	}
 }

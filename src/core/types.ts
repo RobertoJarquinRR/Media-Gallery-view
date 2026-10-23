@@ -24,7 +24,9 @@ export type SortOrder =
 	| 'size-desc'
 	| 'size-asc';
 
-export type ThumbnailKind = 'pdf';
+export type ThumbnailKind = 'pdf' | 'audio' | 'image';
+
+export type ThumbnailPriority = 'high' | 'normal' | 'low';
 
 export interface ThumbnailInfo {
 	src: string;
@@ -34,8 +36,13 @@ export interface ThumbnailInfo {
 }
 
 export interface ThumbnailResolver {
-	resolve(file: TFile, kind: ThumbnailKind): Promise<ThumbnailInfo | null>;
+	resolve(
+		file: TFile,
+		kind: ThumbnailKind,
+		priority?: ThumbnailPriority
+	): Promise<ThumbnailInfo | null>;
 	getKnown(file: TFile): ThumbnailInfo | null;
+	resolvePreview?(file: TFile): Promise<string | null>;
 }
 
 export interface GalleryRenderOptions {
@@ -45,6 +52,7 @@ export interface GalleryRenderOptions {
 	videoMuted: boolean;
 	videoAutoplay: boolean;
 	videoLoop: boolean;
+	audioAutoplay: boolean;
 	overlayArrows: boolean;
 	onOverlayArrowsChange: (visible: boolean) => void;
 	thumbnails?: ThumbnailResolver;
