@@ -1,4 +1,4 @@
-import { App, Platform, TFile, TFolder } from 'obsidian';
+import { App, TFile, TFolder } from 'obsidian';
 import * as mm from 'music-metadata';
 import {
 	encodeImageBuffer,
@@ -53,22 +53,6 @@ interface Picture {
 	format: string;
 }
 
-interface NodeFs {
-	openSync(path: string, flags: string): number;
-	readSync(
-		fd: number,
-		buffer: Uint8Array,
-		offset: number,
-		length: number,
-		position: number
-	): number;
-	closeSync(fd: number): void;
-}
-
-interface AdapterWithFullPath {
-	getFullPath?(path: string): string;
-}
-
 export async function generateAudioThumbnail(
 	app: App,
 	file: TFile,
@@ -101,88 +85,12 @@ async function extractEmbeddedPicture(
 	file: TFile,
 	mime: string
 ): Promise<Picture | null> {
-	const fs = getNodeFs();
-	const fullPath = getFullPath(app, file);
-
-	if (fs && fullPath) {
-		const end = metadataEnd(fs, fullPath, file.extension.toLowerCase());
-		if (end !== null && end > 0 && end <= file.stat.size) {
-			const head = readPrefix(fs, fullPath, end);
-			if (head) return parsePicture(head, mime);
-		}
-	}
-
 	try {
 		const data = new Uint8Array(await app.vault.adapter.readBinary(file.path));
-		const picture = await parsePicture(data, mime);
-		if (picture && (await canDecode(picture))) {
-			return picture;
-		}
+		return parsePicture(data, mime);
 	} catch (error) {
 		console.warn(`[MediaGallery] Could not read ${file.path}`, error);
-	}
-
-	return null;
-}
-
-function metadataEnd(fs: NodeFs, path: string, extension: string): number | null {
-	let fd: number | null = null;
-
-	try {
-		fd = fs.openSync(path, 'r');
-
-		if (extension === 'flac') {
-			const magic = new Uint8Array(4);
-			if (fs.readSync(fd, magic, 0, 4, 0) < 4) return null;
-			if (String.fromCharCode(...magic) !== 'fLaC') return null;
-
-			let offset = 4;
-			for (let index = 0; index < 128; index += 1) {
-				const header = new Uint8Array(4);
-				if (fs.readSync(fd, header, 0, 4, offset) < 4) return null;
-
-				const view = new DataView(header.buffer);
-				const last = (view.getUint8(0) & 0x80) !== 0;
-				const length =
-					(view.getUint8(1) << 16) |
-					(view.getUint8(2) << 8) |
-					view.getUint8(3);
-				offset += 4 + length;
-
-				if (last) return offset;
-			}
-
-			return null;
-		}
-
-		if (extension === 'mp3') {
-			const header = new Uint8Array(10);
-			if (fs.readSync(fd, header, 0, 10, 0) < 10) return null;
-
-			const view = new DataView(header.buffer);
-			if (
-				view.getUint8(0) !== 0x49 ||
-				view.getUint8(1) !== 0x44 ||
-				view.getUint8(2) !== 0x33
-			) {
-				return null;
-			}
-
-			const size =
-				((view.getUint8(6) & 0x7f) << 21) |
-				((view.getUint8(7) & 0x7f) << 14) |
-				((view.getUint8(8) & 0x7f) << 7) |
-				(view.getUint8(9) & 0x7f);
-			const footer = (view.getUint8(5) & 0x10) !== 0 ? 10 : 0;
-
-			return 10 + size + footer;
-		}
-
 		return null;
-	} catch {
-		return null;
-	} finally {
-		if (fd !== null) fs.closeSync(fd);
 	}
 }
 
@@ -205,21 +113,6 @@ async function parsePicture(data: Uint8Array, mime: string): Promise<Picture | n
 		};
 	} catch {
 		return null;
-	}
-}
-
-async function canDecode(picture: Picture): Promise<boolean> {
-	try {
-		const copy = new Uint8Array(picture.data.byteLength);
-		copy.set(picture.data);
-		const bitmap = await createImageBitmap(
-			new Blob([copy], { type: picture.format })
-		);
-		const valid = bitmap.width > 0 && bitmap.height > 0;
-		bitmap.close();
-		return valid;
-	} catch {
-		return false;
 	}
 }
 
@@ -261,46 +154,4 @@ function findFolderCover(file: TFile): TFile | null {
 
 	folderCoverCache.set(folder.path, loose);
 	return loose;
-}
-
-function getNodeFs(): NodeFs | null {
-	if (!Platform.isDesktopApp) return null;
-
-	try {
-		const globalWindow = window as Window & {
-			require?: (id: string) => unknown;
-		};
-		const require = globalWindow.require;
-		if (typeof require !== 'function') return null;
-		// eslint-disable-next-line import/no-nodejs-modules
-		return require('fs') as NodeFs;
-	} catch {
-		return null;
-	}
-}
-
-function getFullPath(app: App, file: TFile): string | null {
-	const adapter = app.vault.adapter as AdapterWithFullPath;
-	if (typeof adapter.getFullPath !== 'function') return null;
-
-	try {
-		return adapter.getFullPath(file.path);
-	} catch {
-		return null;
-	}
-}
-
-function readPrefix(fs: NodeFs, path: string, bytes: number): Uint8Array | null {
-	try {
-		const fd = fs.openSync(path, 'r');
-		try {
-			const buffer = new Uint8Array(bytes);
-			const read = fs.readSync(fd, buffer, 0, bytes, 0);
-			return buffer.subarray(0, read);
-		} finally {
-			fs.closeSync(fd);
-		}
-	} catch {
-		return null;
-	}
 }
