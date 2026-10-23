@@ -110,8 +110,8 @@ export class OverlayManager {
 		this.stage = doc.createElement('div');
 		this.stage.className = 'mg-overlay-stage';
 
-		const prev = this.createEdge(doc, 'left', 'ΓÇ╣', 'Previous');
-		const next = this.createEdge(doc, 'right', 'ΓÇ║', 'Next');
+const prev = this.createEdge(doc, 'left', '\u2039', 'Previous');
+const next = this.createEdge(doc, 'right', '\u203A', 'Next');
 
 		const toolbar = doc.createElement('div');
 		toolbar.className = 'mg-overlay-toolbar';
@@ -122,7 +122,7 @@ export class OverlayManager {
 		this.toggleButton = doc.createElement('button');
 		this.toggleButton.type = 'button';
 		this.toggleButton.className = 'mg-overlay-toggle';
-		this.toggleButton.textContent = 'Γåö';
+		this.toggleButton.textContent = '\u2194';
 		this.toggleButton.setAttribute('aria-label', 'Toggle arrows');
 		this.toggleButton.title = 'Toggle arrows';
 		this.toggleButton.addEventListener('click', (event) => {
@@ -133,7 +133,7 @@ export class OverlayManager {
 		this.openButton = doc.createElement('button');
 		this.openButton.type = 'button';
 		this.openButton.className = 'mg-overlay-open';
-		this.openButton.textContent = 'Γåù';
+		this.openButton.textContent = '\u2197';
 		this.openButton.setAttribute('aria-label', 'Open in default app');
 		this.openButton.title = 'Open in default app';
 		this.openButton.addEventListener('click', (event) => {
@@ -144,7 +144,7 @@ export class OverlayManager {
 		this.closeButton = doc.createElement('button');
 		this.closeButton.type = 'button';
 		this.closeButton.className = 'mg-overlay-close';
-		this.closeButton.textContent = 'Γ£ò';
+		this.closeButton.textContent = '\u2715';
 		this.closeButton.setAttribute('aria-label', 'Close');
 		this.closeButton.title = 'Close (esc)';
 		this.closeButton.addEventListener('click', (event) => {
@@ -206,7 +206,7 @@ export class OverlayManager {
 		doc.body.appendChild(this.overlay);
 	}
 
-	private createEdge(
+private createEdge(
 		doc: Document,
 		side: 'left' | 'right',
 		glyph: string,
