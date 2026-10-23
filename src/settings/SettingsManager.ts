@@ -310,7 +310,7 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 					},
 				],
 			},
-			{
+{
 					type: 'group',
 					heading: translate(lang, 'sectionAppearance'),
 					items: [
@@ -335,17 +335,6 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 									masonry: translate(lang, 'layoutMasonry'),
 									grid: translate(lang, 'layoutGrid'),
 								},
-							},
-						},
-						{
-							name: translate(lang, 'cardHeight'),
-							desc: translate(lang, 'cardHeightDesc'),
-							control: {
-								type: 'slider',
-								key: 'cardHeight',
-								min: 150,
-								max: 500,
-								step: 10,
 							},
 						},
 						{
