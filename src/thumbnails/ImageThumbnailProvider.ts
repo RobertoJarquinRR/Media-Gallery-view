@@ -131,7 +131,7 @@ async function encodeBufferOnMainThread(
 		const naturalHeight = image.naturalHeight || 150;
 		const scale = Math.min(1, targetSize / Math.max(naturalWidth, naturalHeight));
 
-		const canvas = activeDocument.createElement('canvas');
+		const canvas = activeDocument.createEl('canvas');
 		canvas.width = Math.max(1, Math.round(naturalWidth * scale));
 		canvas.height = Math.max(1, Math.round(naturalHeight * scale));
 
@@ -164,7 +164,7 @@ function copyToArrayBuffer(view: Uint8Array): ArrayBuffer {
 
 function loadImage(url: string): Promise<HTMLImageElement> {
 	return new Promise((resolve, reject) => {
-		const image = activeDocument.createElement('img');
+		const image = activeDocument.createEl('img');
 		image.onload = () => resolve(image);
 		image.onerror = () => reject(new Error('Could not decode image'));
 		image.src = url;

@@ -66,8 +66,7 @@ export class AudioGallery implements GalleryProcessor {
 			onArrowsVisibleChange: options.onOverlayArrowsChange,
 			videoAttributes: {},
 			renderContent: (item, stage) => {
-				const doc = stage.ownerDocument;
-				const wrapper = doc.createElement('div');
+				const wrapper = stage.ownerDocument.createDiv();
 				wrapper.className = 'mg-audio-player mg-audio-native';
 				stage.appendChild(wrapper);
 

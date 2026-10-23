@@ -6,7 +6,7 @@ export class GalleryGrid {
 		private readonly doc: Document = activeDocument,
 		cardHeight: number = 290
 	) {
-		this.element = doc.createElement('div');
+		this.element = this.doc.createDiv();
 		this.element.id = id;
 		this.element.className = 'mg-gallery-grid';
 		this.element.setCssProps({ '--mg-card-height': `${cardHeight}px` });
@@ -18,7 +18,7 @@ export class GalleryGrid {
 
 	showEmptyMessage(message: string): void {
 		this.element.empty();
-		const p = this.doc.createElement('p');
+		const p = this.doc.createEl('p');
 		p.textContent = message;
 		this.element.appendChild(p);
 	}
