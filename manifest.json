@@ -3,7 +3,7 @@
 	"name": "Media Gallery view",
 	"version": "0.4.0",
 	"minAppVersion": "1.5.8",
-	"description": "Make a gallery of your videos, images and PDFs.",
+	"description": "Make a gallery of your videos, images, PDFs and audio files.",
 	"author": "RobertoJarquinRR",
 	"authorUrl": "https://github.com/RobertoJarquinRR",
 	"isDesktopOnly": false

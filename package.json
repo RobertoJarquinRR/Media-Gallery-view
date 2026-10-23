@@ -1,7 +1,7 @@
 {
 	"name": "Media-Gallery",
 	"version": "0.4.0",
-	"description": "Make a gallery of your videos, images and PDFs",
+	"description": "Make a gallery of your videos, images, PDFs and audio files",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
