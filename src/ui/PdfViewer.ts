@@ -49,16 +49,16 @@ export class PdfViewer {
 	}
 
 	async mount(parent: HTMLElement): Promise<void> {
-		this.root = this.doc.createDiv();
+		this.root = this.doc.createElement('div');
 		this.root.className = 'mg-pdf-viewer';
 
-		const toolbar = this.doc.createDiv();
+		const toolbar = this.doc.createElement('div');
 		toolbar.className = 'mg-pdf-toolbar';
 
 		const previous = this.createPageButton('‹', 'Previous page', -1);
 		const next = this.createPageButton('›', 'Next page', 1);
 
-		this.label = this.doc.createSpan();
+		this.label = this.doc.createElement('span');
 		this.label.className = 'mg-pdf-page-label';
 		this.label.textContent = '1 / …';
 
@@ -66,11 +66,11 @@ export class PdfViewer {
 		toolbar.appendChild(this.label);
 		toolbar.appendChild(next);
 
-		this.scroll = this.doc.createDiv();
+		this.scroll = this.doc.createElement('div');
 		this.scroll.className = 'mg-pdf-scroll';
 		this.scroll.addEventListener('scroll', this.onScrollBound, { passive: true });
 
-		this.loading = this.doc.createDiv();
+		this.loading = this.doc.createElement('div');
 		this.loading.className = 'mg-pdf-loading';
 		this.loading.textContent = 'Loading PDF…';
 		this.scroll.appendChild(this.loading);
@@ -171,7 +171,7 @@ export class PdfViewer {
 		label: string,
 		direction: number
 	): HTMLButtonElement {
-		const button = this.doc.createEl('button');
+		const button = this.doc.createElement('button');
 		button.type = 'button';
 		button.className = 'mg-pdf-page-button';
 		button.textContent = glyph;
@@ -202,7 +202,7 @@ export class PdfViewer {
 		first.cleanup();
 
 		for (let num = 1; num <= pdf.numPages; num++) {
-			const wrapper = this.doc.createDiv();
+			const wrapper = this.doc.createElement('div');
 			wrapper.className = 'mg-pdf-page';
 			wrapper.dataset.page = String(num);
 			wrapper.setCssProps({ '--mg-pdf-aspect': String(aspect) });
@@ -210,7 +210,7 @@ export class PdfViewer {
 
 			let preview: HTMLImageElement | null = null;
 			if (num === 1 && this.previewSrc) {
-				preview = this.doc.createEl('img');
+				preview = this.doc.createElement('img');
 				preview.className = 'mg-pdf-page-preview';
 				preview.src = this.previewSrc;
 				preview.alt = '';
@@ -294,7 +294,7 @@ export class PdfViewer {
 			const scale = (width / base.width) * dpr;
 			const viewport = page.getViewport({ scale });
 
-			const canvas = this.doc.createEl('canvas');
+			const canvas = this.doc.createElement('canvas');
 			canvas.className = 'mg-pdf-page-canvas';
 			canvas.width = Math.max(1, Math.floor(viewport.width));
 			canvas.height = Math.max(1, Math.floor(viewport.height));
@@ -427,7 +427,7 @@ export class PdfViewer {
 
 		this.root.empty();
 		this.loading = null;
-		const message = this.doc.createEl('p');
+		const message = this.doc.createElement('p');
 		message.className = 'mg-pdf-error';
 		message.textContent = `Could not open ${this.file.basename}.pdf`;
 		this.root.appendChild(message);

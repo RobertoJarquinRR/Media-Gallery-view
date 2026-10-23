@@ -14,8 +14,8 @@ const PREFETCH_DELAY = 800;
 const PREFETCH_CONCURRENCY = 4;
 
 export class ImageGallery implements GalleryProcessor {
-	readonly supportedType = 'image';
-	readonly supportedExtensions = [
+	static readonly type = 'image';
+	static readonly extensions = [
 		'avif',
 		'bmp',
 		'gif',
@@ -25,6 +25,9 @@ export class ImageGallery implements GalleryProcessor {
 		'svg',
 		'webp',
 	] as const;
+
+	readonly supportedType = ImageGallery.type;
+	readonly supportedExtensions = ImageGallery.extensions;
 
 	private grid: GalleryGrid | null = null;
 	private readonly overlay: OverlayManager;
@@ -48,14 +51,15 @@ export class ImageGallery implements GalleryProcessor {
 		this.grid = new GalleryGrid(
 			'mg-gallery-grid',
 			container.ownerDocument,
-			options.cardHeight
+			options.cardHeight,
+			options.layoutMode
 		);
 
 		container.empty();
 		container.appendChild(this.grid.getElement());
 
 		if (files.length === 0) {
-			this.grid.showEmptyMessage('Images not found');
+			this.grid.showEmptyMessage(options.labels?.empty ?? 'Images not found');
 			return;
 		}
 

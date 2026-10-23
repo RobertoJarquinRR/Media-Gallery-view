@@ -1,5 +1,15 @@
 import { TFile, App } from 'obsidian';
 
+export type GalleryType = 'image' | 'pdf' | 'video' | 'audio';
+export type LayoutMode = 'masonry' | 'grid';
+
+export interface GalleryLibrary {
+	id: string;
+	name: string;
+	type: GalleryType;
+	path: string;
+}
+
 export interface GalleryConfig {
 	path: string;
 	type: string;
@@ -56,6 +66,11 @@ export interface GalleryRenderOptions {
 	overlayArrows: boolean;
 	onOverlayArrowsChange: (visible: boolean) => void;
 	thumbnails?: ThumbnailResolver;
+	labels?: {
+		empty?: string;
+		thumbnailsUnavailable?: string;
+	};
+	layoutMode: LayoutMode;
 }
 
 export interface GalleryProcessor {

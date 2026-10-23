@@ -104,25 +104,25 @@ export class OverlayManager {
 	private ensureOverlay(doc: Document): void {
 		if (this.overlay) return;
 
-		this.overlay = doc.createDiv();
+		this.overlay = doc.createElement('div');
 		this.overlay.className = 'mg-overlay is-hidden';
 
-		this.stage = doc.createDiv();
+		this.stage = doc.createElement('div');
 		this.stage.className = 'mg-overlay-stage';
 
-		const prev = this.createEdge(doc, 'left', '‹', 'Previous');
-		const next = this.createEdge(doc, 'right', '›', 'Next');
+const prev = this.createEdge(doc, 'left', '\u2039', 'Previous');
+const next = this.createEdge(doc, 'right', '\u203A', 'Next');
 
-		const toolbar = doc.createDiv();
+		const toolbar = doc.createElement('div');
 		toolbar.className = 'mg-overlay-toolbar';
 
-		this.counter = doc.createSpan();
+		this.counter = doc.createElement('span');
 		this.counter.className = 'mg-overlay-counter';
 
-		this.toggleButton = doc.createEl('button');
+		this.toggleButton = doc.createElement('button');
 		this.toggleButton.type = 'button';
 		this.toggleButton.className = 'mg-overlay-toggle';
-		this.toggleButton.textContent = '↔';
+		this.toggleButton.textContent = '\u2194';
 		this.toggleButton.setAttribute('aria-label', 'Toggle arrows');
 		this.toggleButton.title = 'Toggle arrows';
 		this.toggleButton.addEventListener('click', (event) => {
@@ -130,10 +130,10 @@ export class OverlayManager {
 			this.toggleArrows();
 		});
 
-		this.openButton = doc.createEl('button');
+		this.openButton = doc.createElement('button');
 		this.openButton.type = 'button';
 		this.openButton.className = 'mg-overlay-open';
-		this.openButton.textContent = '↗';
+		this.openButton.textContent = '\u2197';
 		this.openButton.setAttribute('aria-label', 'Open in default app');
 		this.openButton.title = 'Open in default app';
 		this.openButton.addEventListener('click', (event) => {
@@ -141,10 +141,10 @@ export class OverlayManager {
 			this.openCurrent();
 		});
 
-		this.closeButton = doc.createEl('button');
+		this.closeButton = doc.createElement('button');
 		this.closeButton.type = 'button';
 		this.closeButton.className = 'mg-overlay-close';
-		this.closeButton.textContent = '✕';
+		this.closeButton.textContent = '\u2715';
 		this.closeButton.setAttribute('aria-label', 'Close');
 		this.closeButton.title = 'Close (esc)';
 		this.closeButton.addEventListener('click', (event) => {
@@ -157,7 +157,7 @@ export class OverlayManager {
 		toolbar.appendChild(this.toggleButton);
 		toolbar.appendChild(this.closeButton);
 
-		this.thumbsBar = doc.createDiv();
+		this.thumbsBar = doc.createElement('div');
 		this.thumbsBar.className = 'mg-overlay-thumbs';
 		this.thumbsBar.addEventListener('click', (event) => {
 			const target = (event.target as HTMLElement).closest<HTMLElement>(
@@ -206,19 +206,19 @@ export class OverlayManager {
 		doc.body.appendChild(this.overlay);
 	}
 
-	private createEdge(
+private createEdge(
 		doc: Document,
 		side: 'left' | 'right',
 		glyph: string,
 		label: string
 	): HTMLElement {
-		const edge = doc.createDiv();
+		const edge = doc.createElement('div');
 		edge.className = `mg-overlay-edge mg-overlay-edge-${side}`;
 		edge.setAttribute('role', 'button');
 		edge.setAttribute('tabindex', '0');
 		edge.setAttribute('aria-label', label);
 
-		const arrow = doc.createSpan();
+		const arrow = doc.createElement('span');
 		arrow.className = 'mg-overlay-arrow';
 		arrow.textContent = glyph;
 		edge.appendChild(arrow);
@@ -270,9 +270,7 @@ export class OverlayManager {
 				this.options.renderContent(item, this.stage, this.mediaType) ?? null;
 		} else {
 			const doc = this.getDocument();
-			const media = doc.createEl(
-				this.mediaType === 'video' ? 'video' : 'img'
-			);
+			const media = doc.createElement(this.mediaType === 'video' ? 'video' : 'img');
 
 			if (this.mediaType === 'video') {
 				Object.entries(this.options.videoAttributes).forEach(([key, value]) => {
@@ -295,7 +293,7 @@ export class OverlayManager {
 		this.thumbsBar.empty();
 
 		this.items.forEach((item, itemIndex) => {
-			const thumb = doc.createEl('button');
+			const thumb = doc.createElement('button');
 			thumb.type = 'button';
 			thumb.className = 'mg-overlay-thumb';
 			thumb.dataset.index = String(itemIndex);
@@ -306,18 +304,18 @@ export class OverlayManager {
 			const thumbSource = this.options.thumbSrc?.(item);
 
 			if (thumbSource) {
-				const preview = doc.createEl('img');
+				const preview = doc.createElement('img');
 				preview.setAttribute('loading', 'lazy');
 				preview.setAttribute('src', thumbSource);
 				preview.setAttribute('alt', item.file.basename);
 				thumb.appendChild(preview);
 			} else if (this.mediaType === 'pdf') {
 				thumb.classList.add('is-placeholder');
-				const label = doc.createSpan();
+				const label = doc.createElement('span');
 				label.textContent = 'PDF';
 				thumb.appendChild(label);
 			} else {
-				const preview = doc.createEl(isVideo ? 'video' : 'img');
+				const preview = doc.createElement(isVideo ? 'video' : 'img');
 
 				if (isVideo) {
 					preview.setAttribute('muted', 'true');

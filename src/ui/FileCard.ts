@@ -39,7 +39,7 @@ export class FileCard {
 
 	private createCard(options: FileCardOptions): HTMLDivElement {
 		const doc = getActiveDocument(this.app);
-		const card = doc.createDiv();
+		const card = doc.createElement('div');
 		card.className = 'mg-file-card';
 		card.dataset.path = options.file.path;
 		card.classList.add('mg-clickable');
@@ -51,7 +51,7 @@ export class FileCard {
 
 	private createMediaElement(options: FileCardOptions): HTMLElement {
 		const doc = getActiveDocument(this.app);
-		const element = doc.createEl(options.mediaTag);
+		const element = doc.createElement(options.mediaTag);
 		element.className = 'mg-media-element';
 
 		Object.entries(options.mediaAttributes).forEach(([key, value]) => {
@@ -85,9 +85,9 @@ export class FileCard {
 
 	private createInfoElement(file: TFile): HTMLDivElement {
 		const doc = getActiveDocument(this.app);
-		const info = doc.createDiv();
+		const info = doc.createElement('div');
 		info.className = 'mg-info';
-		const name = doc.createEl('p');
+		const name = doc.createElement('p');
 		name.textContent = `${file.basename}.${file.extension}`;
 		info.appendChild(name);
 		return info;

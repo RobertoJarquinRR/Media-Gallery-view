@@ -7,8 +7,11 @@ import { OverlayManager } from '../ui/OverlayManager';
 import { SettingsManager } from '../settings/SettingsManager';
 
 export class VideoGallery implements GalleryProcessor {
-	readonly supportedType = 'video';
-	readonly supportedExtensions = ['mkv', 'mov', 'mp4', 'ogv', 'webm'] as const;
+	static readonly type = 'video';
+	static readonly extensions = ['mkv', 'mov', 'mp4', 'ogv', 'webm'] as const;
+
+	readonly supportedType = VideoGallery.type;
+	readonly supportedExtensions = VideoGallery.extensions;
 
 	private grid: GalleryGrid | null = null;
 	private readonly overlay: OverlayManager;
@@ -30,14 +33,15 @@ export class VideoGallery implements GalleryProcessor {
 		this.grid = new GalleryGrid(
 			'mg-gallery-grid',
 			container.ownerDocument,
-			options.cardHeight
+			options.cardHeight,
+			options.layoutMode
 		);
 
 		container.empty();
 		container.appendChild(this.grid.getElement());
 
 		if (files.length === 0) {
-			this.grid.showEmptyMessage('Video not found');
+			this.grid.showEmptyMessage(options.labels?.empty ?? 'Video not found');
 			return;
 		}
 

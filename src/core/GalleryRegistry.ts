@@ -1,54 +1,45 @@
-import { GalleryProcessor, GalleryFile, GalleryRenderOptions } from './types';
-import { App } from 'obsidian';
+import { GalleryProcessor } from './types';
+
+export type GalleryProcessorFactory = () => GalleryProcessor;
+
+interface GalleryRegistration {
+	type: string;
+	extensions: readonly string[];
+	factory: GalleryProcessorFactory;
+}
 
 export class GalleryRegistry {
-	private readonly processors = new Map<string, GalleryProcessor>();
+	private readonly registrations = new Map<string, GalleryRegistration>();
 
-	register(processor: GalleryProcessor): void {
-		const key = processor.supportedType.toLowerCase();
-		if (this.processors.has(key)) {
+	register(
+		type: string,
+		extensions: readonly string[],
+		factory: GalleryProcessorFactory
+	): void {
+		const key = type.toLowerCase();
+		if (this.registrations.has(key)) {
 			console.warn(`[GalleryRegistry] Overwriting processor for type: ${key}`);
 		}
-		this.processors.set(key, processor);
+		this.registrations.set(key, { type: key, extensions, factory });
 	}
 
 	unregister(type: string): boolean {
-		return this.processors.delete(type.toLowerCase());
+		return this.registrations.delete(type.toLowerCase());
 	}
 
-	get(type: string): GalleryProcessor | undefined {
-		return this.processors.get(type.toLowerCase());
+	create(type: string): GalleryProcessor | undefined {
+		return this.registrations.get(type.toLowerCase())?.factory();
 	}
 
-	getAll(): GalleryProcessor[] {
-		return Array.from(this.processors.values());
+	getExtensions(type: string): readonly string[] | undefined {
+		return this.registrations.get(type.toLowerCase())?.extensions;
 	}
 
 	getSupportedTypes(): string[] {
-		return Array.from(this.processors.keys());
-	}
-
-	async process(
-		type: string,
-		files: GalleryFile[],
-		container: HTMLElement,
-		app: App,
-		options: GalleryRenderOptions
-	): Promise<void> {
-		const processor = this.get(type);
-		if (!processor) {
-			const available = this.getSupportedTypes().join(', ');
-			throw new Error(
-				`No gallery processor registered for type: "${type}". Available: ${available}`
-			);
-		}
-		processor.process(files, container, app, options);
+		return Array.from(this.registrations.keys());
 	}
 
 	destroyAll(): void {
-		for (const processor of this.processors.values()) {
-			processor.destroy?.();
-		}
-		this.processors.clear();
+		this.registrations.clear();
 	}
 }
