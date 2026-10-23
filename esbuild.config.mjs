@@ -4,6 +4,13 @@ import { builtinModules } from 'node:module';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
+const sanitizeDynamicCode = (source) =>
+	source.replace(
+		/new Function\s*\(([^)]*)\)/g,
+		(_, args) =>
+			`(() => { throw new Error("Dynamic code execution is disabled"); })(${args})`
+	);
+
 const pdfWorkerPlugin = {
 	name: 'pdf-worker-text',
 	setup(build) {
@@ -17,8 +24,21 @@ const pdfWorkerPlugin = {
 		build.onLoad(
 			{ filter: /.*/, namespace: 'pdf-worker-text' },
 			async (args) => ({
-				contents: await readFile(args.path, 'utf8'),
+				contents: sanitizeDynamicCode(await readFile(args.path, 'utf8')),
 				loader: 'text',
+			})
+		);
+	},
+};
+
+const pdfSanitizePlugin = {
+	name: 'pdf-sanitize',
+	setup(build) {
+		build.onLoad(
+			{ filter: /pdfjs-dist[\\/]build[\\/]pdf\.mjs$/ },
+			async (args) => ({
+				contents: sanitizeDynamicCode(await readFile(args.path, 'utf8')),
+				loader: 'js',
 			})
 		);
 	},
@@ -61,7 +81,7 @@ const context = await esbuild.context({
 	treeShaking: true,
 	outfile: 'main.js',
 	minify: prod,
-	plugins: [pdfWorkerPlugin],
+	plugins: [pdfWorkerPlugin, pdfSanitizePlugin],
 });
 
 if (prod) {

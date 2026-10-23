@@ -18,6 +18,7 @@ export function openPdf(data: ArrayBuffer): PDFDocumentLoadingTask {
 			data,
 			worker,
 			useSystemFonts: true,
+			isEvalSupported: false,
 			verbosity: 0,
 		});
 	}
@@ -26,6 +27,7 @@ export function openPdf(data: ArrayBuffer): PDFDocumentLoadingTask {
 	return getDocument({
 		data,
 		useSystemFonts: true,
+		isEvalSupported: false,
 		verbosity: 0,
 	});
 }
