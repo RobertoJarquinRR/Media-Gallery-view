@@ -13,6 +13,8 @@ export class GalleryGrid {
 		this.element.className = className;
 		if (layoutMode === 'grid') {
 			this.element.classList.add('mg-layout-grid');
+		} else {
+			this.element.classList.add('mg-layout-masonry');
 		}
 		this.element.setCssProps({ '--mg-card-height': `${cardHeight}px` });
 	}
