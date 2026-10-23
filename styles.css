@@ -1,26 +1,38 @@
 .mg-gallery-grid {
-	column-width: 220px;
-	column-gap: 5px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px;
+	align-items: flex-start;
+}
+
+.mg-gallery-grid.mg-layout-masonry .mg-file-card {
+	height: var(--mg-card-height, 290px);
+	flex: 0 0 auto;
+	width: auto;
 }
 
 .mg-gallery-grid.mg-layout-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 	gap: 5px;
-	column-width: auto;
-	column-gap: 0;
 }
 
 .mg-gallery-grid.mg-layout-grid .mg-file-card {
-	height: auto;
-	aspect-ratio: 4 / 3;
-	break-inside: auto;
+	height: var(--mg-card-height, 290px);
+}
+
+.mg-file-card .mg-media-element {
+	height: 100%;
+	width: auto;
+	object-fit: contain;
+	display: block;
+	flex-shrink: 0;
 }
 
 .mg-gallery-grid.mg-layout-grid .mg-file-card .mg-media-element {
 	height: 100%;
-	width: 100%;
-	object-fit: cover;
+	width: auto;
+	object-fit: contain;
 }
 
 .mg-gallery-grid.mg-layout-grid .mg-file-card.mg-has-info .mg-media-element {
@@ -167,12 +179,12 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 34px;
-	height: 34px;
+	width: 28px;
+	height: 28px;
 	border-radius: 50%;
 	background: rgba(0, 0, 0, 0.35);
 	color: rgba(255, 255, 255, 0.75);
-	font-size: 1.5rem;
+	font-size: 1.2rem;
 	line-height: 1;
 	transition: opacity 0.15s ease, background 0.15s ease;
 }
@@ -212,10 +224,10 @@
 	background: transparent;
 	color: #fff;
 	cursor: pointer;
-	font-size: 1.1rem;
+	font-size: 0.9rem;
 	line-height: 1;
-	padding: 4px 6px;
-	border-radius: 6px;
+	padding: 3px 5px;
+	border-radius: 4px;
 }
 
 .mg-overlay-toggle:hover,
