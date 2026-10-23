@@ -1,7 +1,7 @@
 import { App } from 'obsidian';
 import { GalleryFile } from '../core/types';
 
-export type OverlayMediaType = 'image' | 'video' | 'pdf';
+export type OverlayMediaType = 'image' | 'video' | 'pdf' | 'audio';
 
 export interface OverlayContentHandle {
 	destroy(): void;
@@ -30,7 +30,9 @@ export class OverlayManager {
 	private counter: HTMLSpanElement | null = null;
 	private toggleButton: HTMLButtonElement | null = null;
 	private openButton: HTMLButtonElement | null = null;
+	private closeButton: HTMLButtonElement | null = null;
 	private contentHandle: OverlayContentHandle | null = null;
+	private thumbCenterFrame: number | null = null;
 
 	private items: GalleryFile[] = [];
 	private index = 0;
@@ -66,6 +68,7 @@ export class OverlayManager {
 		this.applyArrowsVisibility();
 		this.applyOpenVisibility();
 		this.overlay?.classList.remove('is-hidden');
+		this.scheduleThumbCenter();
 
 		doc.removeEventListener('keydown', this.boundKeyDown);
 		doc.addEventListener('keydown', this.boundKeyDown);
@@ -80,6 +83,10 @@ export class OverlayManager {
 
 	destroy(): void {
 		this.close();
+		if (this.thumbCenterFrame !== null) {
+			window.cancelAnimationFrame(this.thumbCenterFrame);
+			this.thumbCenterFrame = null;
+		}
 		this.overlay?.remove();
 		this.overlay = null;
 		this.stage = null;
@@ -87,6 +94,7 @@ export class OverlayManager {
 		this.counter = null;
 		this.toggleButton = null;
 		this.openButton = null;
+		this.closeButton = null;
 	}
 
 	private getDocument(): Document {
@@ -133,9 +141,21 @@ export class OverlayManager {
 			this.openCurrent();
 		});
 
+		this.closeButton = doc.createElement('button');
+		this.closeButton.type = 'button';
+		this.closeButton.className = 'mg-overlay-close';
+		this.closeButton.textContent = '✕';
+		this.closeButton.setAttribute('aria-label', 'Close');
+		this.closeButton.title = 'Close (esc)';
+		this.closeButton.addEventListener('click', (event) => {
+			event.stopPropagation();
+			this.close();
+		});
+
 		toolbar.appendChild(this.counter);
 		toolbar.appendChild(this.openButton);
 		toolbar.appendChild(this.toggleButton);
+		toolbar.appendChild(this.closeButton);
 
 		this.thumbsBar = doc.createElement('div');
 		this.thumbsBar.className = 'mg-overlay-thumbs';
@@ -157,25 +177,30 @@ export class OverlayManager {
 		this.overlay.appendChild(this.thumbsBar);
 
 		this.overlay.addEventListener('click', (event) => {
-			if (event.target === this.overlay) {
-				this.close();
-			}
+			if (event.target !== this.overlay) return;
+			this.close();
 		});
 
 		this.stage.addEventListener('click', (event) => {
-			if (event.target === this.stage) {
+			const target = event.target as HTMLElement;
+			if (target.closest('.mg-audio-player, .internal-embed, audio, .mg-overlay-toolbar, .mg-overlay-thumbs')) {
+				return;
+			}
+			if (target === this.stage) {
 				this.close();
 			}
 		});
 
 		this.stage.addEventListener('dblclick', (event) => {
-			if (this.mediaType !== 'pdf') return;
-			event.preventDefault();
-
 			const item = this.items[this.index];
 			if (!item) return;
 
-			(this.options.onDoubleClickContent ?? this.options.onOpenExternal)?.(item);
+			const action =
+				this.options.onDoubleClickContent ?? this.options.onOpenExternal;
+			if (!action) return;
+
+			event.preventDefault();
+			action(item);
 		});
 
 		doc.body.appendChild(this.overlay);
@@ -319,12 +344,65 @@ export class OverlayManager {
 
 		const thumbs = this.thumbsBar.querySelectorAll<HTMLElement>('.mg-overlay-thumb');
 		thumbs.forEach((thumb, thumbIndex) => {
-			const isCurrent = thumbIndex === this.index;
-			thumb.classList.toggle('is-current', isCurrent);
-			if (isCurrent) {
-				thumb.scrollIntoView({ block: 'nearest', inline: 'center' });
+			thumb.classList.toggle('is-current', thumbIndex === this.index);
+		});
+		this.scheduleThumbCenter();
+	}
+
+	private scheduleThumbCenter(): void {
+		if (this.thumbCenterFrame !== null) {
+			window.cancelAnimationFrame(this.thumbCenterFrame);
+		}
+		this.thumbCenterFrame = window.requestAnimationFrame(() => {
+			this.thumbCenterFrame = null;
+			const current = this.thumbsBar?.querySelector<HTMLElement>(
+				'.mg-overlay-thumb.is-current'
+			);
+			if (current) {
+				this.centerThumb(current);
 			}
 		});
+	}
+
+	private centerThumb(thumb: HTMLElement): void {
+		const bar = this.thumbsBar;
+		if (!bar) return;
+
+		const scroller = this.findScrollable(bar);
+		if (!scroller) return;
+
+		const scrollerRect = scroller.getBoundingClientRect();
+		if (scrollerRect.width === 0) return;
+
+		const thumbRect = thumb.getBoundingClientRect();
+		const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+		const target = Math.max(
+			0,
+			Math.min(
+				maxScroll,
+				scroller.scrollLeft +
+					(thumbRect.left - scrollerRect.left) -
+					(scrollerRect.width - thumbRect.width) / 2
+			)
+		);
+
+		scroller.scrollTo({ left: target, behavior: 'smooth' });
+		window.setTimeout(() => {
+			if (Math.abs(scroller.scrollLeft - target) > 2) {
+				scroller.scrollLeft = target;
+			}
+		}, 320);
+	}
+
+	private findScrollable(start: HTMLElement): HTMLElement | null {
+		let element: HTMLElement | null = start;
+		while (element) {
+			if (element.scrollWidth > element.clientWidth + 1) {
+				return element;
+			}
+			element = element.parentElement;
+		}
+		return start;
 	}
 
 	private navigate(delta: number): void {
@@ -386,7 +464,8 @@ export class OverlayManager {
 	}
 
 	private pauseMedia(): void {
-		const media = this.stage?.querySelector('video');
-		media?.pause();
+		this.stage
+			?.querySelectorAll<HTMLMediaElement>('video, audio')
+			.forEach((media) => media.pause());
 	}
 }

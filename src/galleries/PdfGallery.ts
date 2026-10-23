@@ -5,7 +5,7 @@ import {
 	GalleryRenderOptions,
 	ThumbnailResolver,
 } from '../core/types';
-import { openFileInObsidian, openFileNative } from '../core/openNative';
+import { openMediaFile } from '../core/openNative';
 import { FileCard } from '../ui/FileCard';
 import { GalleryGrid } from '../ui/GalleryGrid';
 import { OverlayManager } from '../ui/OverlayManager';
@@ -73,7 +73,7 @@ export class PdfGallery implements GalleryProcessor {
 				};
 			},
 			thumbSrc: (item) => thumbnails.getKnown(item.file)?.src,
-			onOpenExternal: (item) => openFileNative(app, item.file),
+			onOpenExternal: (item) => this.openPdf(app, item.file),
 			onDoubleClickContent: (item) => this.openPdf(app, item.file),
 			onKeyDown: (event) => this.viewer?.handleKey(event) ?? false,
 		});
@@ -149,13 +149,7 @@ export class PdfGallery implements GalleryProcessor {
 
 	private openPdf(app: App, file: TFile): void {
 		this.overlay.close();
-
-		if (this.settings.getSettings().pdfOpenWith === 'system') {
-			openFileNative(app, file);
-			return;
-		}
-
-		openFileInObsidian(app, file);
+		openMediaFile(app, file, this.settings.getSettings().openWith);
 	}
 
 	private resolveThumbnail(

@@ -1,8 +1,10 @@
 import { GalleryProcessor, GalleryFile, GalleryRenderOptions } from '../core/types';
 import { App, TFile } from 'obsidian';
+import { openMediaFile } from '../core/openNative';
 import { FileCard, FileCardOptions } from '../ui/FileCard';
 import { GalleryGrid } from '../ui/GalleryGrid';
 import { OverlayManager } from '../ui/OverlayManager';
+import { SettingsManager } from '../settings/SettingsManager';
 
 export class VideoGallery implements GalleryProcessor {
 	readonly supportedType = 'video';
@@ -11,7 +13,10 @@ export class VideoGallery implements GalleryProcessor {
 	private grid: GalleryGrid | null = null;
 	private readonly overlay: OverlayManager;
 
-	constructor(app: App) {
+	constructor(
+		app: App,
+		private readonly settings: SettingsManager
+	) {
 		this.overlay = new OverlayManager(app);
 	}
 
@@ -67,6 +72,7 @@ export class VideoGallery implements GalleryProcessor {
 			arrowsVisible: options.overlayArrows,
 			onArrowsVisibleChange: options.onOverlayArrowsChange,
 			videoAttributes: overlayAttributes,
+			onOpenExternal: (item) => this.openItem(app, item.file),
 		});
 
 		for (const file of files) {
@@ -76,10 +82,9 @@ export class VideoGallery implements GalleryProcessor {
 				mediaTag: 'video',
 				mediaAttributes,
 				showFileName: options.showFileNames,
+				doubleClickMedia: true,
 				onClick: (clicked: TFile, event: MouseEvent) => {
-					const target = event.target as HTMLElement;
-					const bounds = target.getBoundingClientRect();
-					if (event.clientY > bounds.bottom - 40) {
+					if (this.isInControlsBand(event, options.videoControls)) {
 						return;
 					}
 
@@ -91,14 +96,29 @@ export class VideoGallery implements GalleryProcessor {
 					);
 					this.overlay.open(files, index, 'video');
 				},
-				onDoubleClick: (file: TFile) => {
-					void app.workspace.openLinkText(file.path, '', true);
+				onDoubleClick: (file: TFile, event: MouseEvent) => {
+					if (this.isInControlsBand(event, options.videoControls)) {
+						return;
+					}
+					this.openItem(app, file);
 				},
 			};
 
 			const card = new FileCard(app, cardOptions);
 			this.grid.addCard(card.getElement());
 		}
+	}
+
+	private isInControlsBand(event: MouseEvent, controls: boolean): boolean {
+		if (!controls) return false;
+		const target = event.target as HTMLElement;
+		const bounds = target.getBoundingClientRect();
+		return event.clientY > bounds.bottom - 40;
+	}
+
+	private openItem(app: App, file: TFile): void {
+		this.overlay.close();
+		openMediaFile(app, file, this.settings.getSettings().openWith);
 	}
 
 	private pauseVideos(root: HTMLElement): void {
