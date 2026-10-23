@@ -17,14 +17,14 @@ export class GalleryGrid {
 	}
 
 	showEmptyMessage(message: string): void {
-		this.element.innerHTML = '';
+		this.element.empty();
 		const p = this.doc.createElement('p');
 		p.textContent = message;
 		this.element.appendChild(p);
 	}
 
 	clear(): void {
-		this.element.innerHTML = '';
+		this.element.empty();
 	}
 
 	getElement(): HTMLDivElement {

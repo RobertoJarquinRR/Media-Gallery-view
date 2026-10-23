@@ -261,7 +261,7 @@ export class OverlayManager {
 
 		this.pauseMedia();
 		this.destroyContent();
-		this.stage.innerHTML = '';
+		this.stage.empty();
 		this.stage.classList.toggle('mg-overlay-stage-pdf', this.mediaType === 'pdf');
 		this.overlay?.classList.toggle('is-pdf', this.mediaType === 'pdf');
 
@@ -292,7 +292,7 @@ export class OverlayManager {
 		if (!this.thumbsBar) return;
 
 		const doc = this.getDocument();
-		this.thumbsBar.innerHTML = '';
+		this.thumbsBar.empty();
 
 		this.items.forEach((item, itemIndex) => {
 			const thumb = doc.createElement('button');

@@ -41,7 +41,7 @@ export class PdfGallery implements GalleryProcessor {
 			options.cardHeight
 		);
 
-		container.innerHTML = '';
+		container.empty();
 		container.appendChild(this.grid.getElement());
 
 		if (files.length === 0) {

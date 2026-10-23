@@ -47,7 +47,7 @@ export class AudioGallery implements GalleryProcessor {
 			options.cardHeight
 		);
 
-		container.innerHTML = '';
+		container.empty();
 		container.appendChild(this.grid.getElement());
 
 		if (files.length === 0) {
@@ -78,7 +78,7 @@ export class AudioGallery implements GalleryProcessor {
 				const mountFallback = () => {
 					if (fallbackPlayer) return;
 					wrapper.classList.remove('mg-audio-native');
-					wrapper.innerHTML = '';
+					wrapper.empty();
 					fallbackPlayer = new AudioPlayer(
 						app,
 						item.file,
