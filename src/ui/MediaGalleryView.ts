@@ -234,6 +234,7 @@ export class MediaGalleryView extends ItemView {
 			settings.videoAutoplay,
 			settings.videoLoop,
 			settings.audioAutoplay,
+			settings.layoutMode,
 		].join('|');
 	}
 

@@ -47,7 +47,8 @@ export class AudioGallery implements GalleryProcessor {
 		this.grid = new GalleryGrid(
 			'mg-gallery-grid',
 			container.ownerDocument,
-			options.cardHeight
+			options.cardHeight,
+			options.layoutMode
 		);
 
 		container.empty();

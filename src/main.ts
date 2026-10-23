@@ -219,6 +219,7 @@ export default class MediaGallery extends Plugin {
 				empty: translate(language, EMPTY_LABEL_KEYS[type]),
 				thumbnailsUnavailable: translate(language, 'thumbnailsUnavailable'),
 			},
+			layoutMode: settings.layoutMode,
 		};
 	}
 

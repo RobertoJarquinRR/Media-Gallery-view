@@ -5,7 +5,7 @@ import {
 	Setting,
 	SettingDefinitionItem,
 } from 'obsidian';
-import { GalleryLibrary, GalleryType, SortOrder } from '../core/types';
+import { GalleryLibrary, GalleryType, SortOrder, LayoutMode } from '../core/types';
 import { Language, translate } from '../i18n';
 
 const EXTENSION_KEYS = new Set([
@@ -24,6 +24,7 @@ export interface MediaGallerySettings {
 	thumbnailFolder: string;
 	defaultType: GalleryType;
 	sortOrder: SortOrder;
+	layoutMode: LayoutMode;
 	cardHeight: number;
 	showFileNames: boolean;
 	videoControls: boolean;
@@ -55,6 +56,7 @@ export const DEFAULT_SETTINGS: MediaGallerySettings = {
 	thumbnailFolder: '',
 	defaultType: 'video',
 	sortOrder: 'mtime-desc',
+	layoutMode: 'masonry',
 	cardHeight: 290,
 	showFileNames: true,
 	videoControls: true,
@@ -91,6 +93,10 @@ export class SettingsManager {
 
 		if (this.settings.language !== 'en' && this.settings.language !== 'es') {
 			this.settings.language = 'en';
+		}
+
+		if (this.settings.layoutMode !== 'masonry' && this.settings.layoutMode !== 'grid') {
+			this.settings.layoutMode = 'masonry';
 		}
 
 		this.settings.enableGalleryView = Boolean(this.settings.enableGalleryView);
@@ -305,41 +311,64 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 				],
 			},
 			{
-				type: 'group',
-				heading: translate(lang, 'sectionAppearance'),
-				items: [
-					{
-						name: translate(lang, 'cardHeight'),
-						desc: translate(lang, 'cardHeightDesc'),
-						control: {
-							type: 'slider',
-							key: 'cardHeight',
-							min: 150,
-							max: 500,
-							step: 10,
+					type: 'group',
+					heading: translate(lang, 'sectionAppearance'),
+					items: [
+						{
+							name: translate(lang, 'cardHeight'),
+							desc: translate(lang, 'cardHeightDesc'),
+							control: {
+								type: 'slider',
+								key: 'cardHeight',
+								min: 150,
+								max: 500,
+								step: 10,
+							},
 						},
-					},
-					{
-						name: translate(lang, 'showFileNames'),
-						desc: translate(lang, 'showFileNamesDesc'),
-						control: { type: 'toggle', key: 'showFileNames' },
-					},
-					{
-						name: translate(lang, 'overlayArrows'),
-						desc: translate(lang, 'overlayArrowsDesc'),
-						control: { type: 'toggle', key: 'overlayArrows' },
-					},
-					{
-						name: translate(lang, 'customThumbnailFolder'),
-						desc: translate(lang, 'customThumbnailFolderDesc'),
-						control: {
-							type: 'text',
-							key: 'thumbnailFolder',
-							placeholder: 'Attachments/thumbnails',
+						{
+							name: translate(lang, 'layoutMode'),
+							desc: translate(lang, 'layoutModeDesc'),
+							control: {
+								type: 'dropdown',
+								key: 'layoutMode',
+								options: {
+									masonry: translate(lang, 'layoutMasonry'),
+									grid: translate(lang, 'layoutGrid'),
+								},
+							},
 						},
-					},
-				],
-			},
+						{
+							name: translate(lang, 'cardHeight'),
+							desc: translate(lang, 'cardHeightDesc'),
+							control: {
+								type: 'slider',
+								key: 'cardHeight',
+								min: 150,
+								max: 500,
+								step: 10,
+							},
+						},
+						{
+							name: translate(lang, 'showFileNames'),
+							desc: translate(lang, 'showFileNamesDesc'),
+							control: { type: 'toggle', key: 'showFileNames' },
+						},
+						{
+							name: translate(lang, 'overlayArrows'),
+							desc: translate(lang, 'overlayArrowsDesc'),
+							control: { type: 'toggle', key: 'overlayArrows' },
+						},
+						{
+							name: translate(lang, 'customThumbnailFolder'),
+							desc: translate(lang, 'customThumbnailFolderDesc'),
+							control: {
+								type: 'text',
+								key: 'thumbnailFolder',
+								placeholder: 'Attachments/thumbnails',
+							},
+						},
+					],
+				},
 			{
 				type: 'group',
 				heading: translate(lang, 'sectionVideo'),

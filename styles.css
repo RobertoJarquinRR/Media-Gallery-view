@@ -3,6 +3,30 @@
 	column-gap: 5px;
 }
 
+.mg-gallery-grid.mg-layout-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+	gap: 5px;
+	column-width: auto;
+	column-gap: 0;
+}
+
+.mg-gallery-grid.mg-layout-grid .mg-file-card {
+	height: auto;
+	aspect-ratio: 4 / 3;
+	break-inside: auto;
+}
+
+.mg-gallery-grid.mg-layout-grid .mg-file-card .mg-media-element {
+	height: 100%;
+	width: 100%;
+	object-fit: cover;
+}
+
+.mg-gallery-grid.mg-layout-grid .mg-file-card.mg-has-info .mg-media-element {
+	height: calc(100% - 30px);
+}
+
 .mg-file-card {
 	display: flex;
 	flex-direction: column;
