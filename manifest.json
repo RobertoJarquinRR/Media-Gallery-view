@@ -1,7 +1,7 @@
 {
 	"id": "media-gallery-grid",
 	"name": "Media Gallery view",
-	"version": "0.5.0",
+	"version": "0.5.1",
 	"minAppVersion": "1.5.8",
 	"description": "Make a gallery of your videos, images, PDFs and audio files.",
 	"author": "RobertoJarquinRR",
