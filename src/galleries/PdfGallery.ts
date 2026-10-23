@@ -13,8 +13,11 @@ import { PdfViewer } from '../ui/PdfViewer';
 import { SettingsManager } from '../settings/SettingsManager';
 
 export class PdfGallery implements GalleryProcessor {
-	readonly supportedType = 'pdf';
-	readonly supportedExtensions = ['pdf'] as const;
+	static readonly type = 'pdf';
+	static readonly extensions = ['pdf'] as const;
+
+	readonly supportedType = PdfGallery.type;
+	readonly supportedExtensions = PdfGallery.extensions;
 
 	private grid: GalleryGrid | null = null;
 	private readonly overlay: OverlayManager;
@@ -45,13 +48,15 @@ export class PdfGallery implements GalleryProcessor {
 		container.appendChild(this.grid.getElement());
 
 		if (files.length === 0) {
-			this.grid.showEmptyMessage('PDF not found');
+			this.grid.showEmptyMessage(options.labels?.empty ?? 'PDF not found');
 			return;
 		}
 
 		const thumbnails = options.thumbnails;
 		if (!thumbnails) {
-			this.grid.showEmptyMessage('Thumbnail service unavailable');
+			this.grid.showEmptyMessage(
+				options.labels?.thumbnailsUnavailable ?? 'Thumbnail service unavailable'
+			);
 			return;
 		}
 

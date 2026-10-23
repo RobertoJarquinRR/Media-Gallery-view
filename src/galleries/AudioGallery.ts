@@ -9,8 +9,8 @@ import { DEFAULT_AUDIO_ARTWORK, DEFAULT_AUDIO_ARTWORK_SIZE } from '../ui/default
 import { SettingsManager } from '../settings/SettingsManager';
 
 export class AudioGallery implements GalleryProcessor {
-	readonly supportedType = 'audio';
-	readonly supportedExtensions = [
+	static readonly type = 'audio';
+	static readonly extensions = [
 		'mp3',
 		'flac',
 		'ogg',
@@ -23,6 +23,9 @@ export class AudioGallery implements GalleryProcessor {
 		'aiff',
 		'aif',
 	] as const;
+
+	readonly supportedType = AudioGallery.type;
+	readonly supportedExtensions = AudioGallery.extensions;
 
 	private grid: GalleryGrid | null = null;
 	private readonly overlay: OverlayManager;
@@ -51,13 +54,13 @@ export class AudioGallery implements GalleryProcessor {
 		container.appendChild(this.grid.getElement());
 
 		if (files.length === 0) {
-			this.grid.showEmptyMessage('Audio files not found');
+			this.grid.showEmptyMessage(options.labels?.empty ?? 'Audio files not found');
 			return;
 		}
 
 		const thumbnails = options.thumbnails;
 		if (!thumbnails) {
-			this.grid.showEmptyMessage('Thumbnail service unavailable');
+			this.grid.showEmptyMessage(options.labels?.thumbnailsUnavailable ?? 'Thumbnail service unavailable');
 			return;
 		}
 
@@ -66,7 +69,7 @@ export class AudioGallery implements GalleryProcessor {
 			onArrowsVisibleChange: options.onOverlayArrowsChange,
 			videoAttributes: {},
 			renderContent: (item, stage) => {
-				const wrapper = stage.ownerDocument.createDiv();
+				const wrapper = stage.ownerDocument.createElement('div');
 				wrapper.className = 'mg-audio-player mg-audio-native';
 				stage.appendChild(wrapper);
 

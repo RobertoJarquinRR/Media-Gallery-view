@@ -5,7 +5,8 @@ import {
 	Setting,
 	SettingDefinitionItem,
 } from 'obsidian';
-import { SortOrder } from '../core/types';
+import { GalleryLibrary, GalleryType, SortOrder } from '../core/types';
+import { Language, translate } from '../i18n';
 
 const EXTENSION_KEYS = new Set([
 	'videoExtensions',
@@ -21,7 +22,7 @@ export interface MediaGallerySettings {
 	audioExtensions: string[];
 	openWith: 'obsidian' | 'system';
 	thumbnailFolder: string;
-	defaultType: 'video' | 'image' | 'pdf' | 'audio';
+	defaultType: GalleryType;
 	sortOrder: SortOrder;
 	cardHeight: number;
 	showFileNames: boolean;
@@ -31,6 +32,18 @@ export interface MediaGallerySettings {
 	videoLoop: boolean;
 	audioAutoplay: boolean;
 	overlayArrows: boolean;
+	libraries: GalleryLibrary[];
+	enableGalleryView: boolean;
+	language: Language;
+}
+
+export function createDefaultLibraries(): GalleryLibrary[] {
+	return [
+		{ id: 'default-image', name: 'Images', type: 'image', path: '' },
+		{ id: 'default-pdf', name: 'PDF', type: 'pdf', path: '' },
+		{ id: 'default-video', name: 'Video', type: 'video', path: '' },
+		{ id: 'default-audio', name: 'Music', type: 'audio', path: '' },
+	];
 }
 
 export const DEFAULT_SETTINGS: MediaGallerySettings = {
@@ -50,11 +63,15 @@ export const DEFAULT_SETTINGS: MediaGallerySettings = {
 	videoLoop: false,
 	audioAutoplay: false,
 	overlayArrows: true,
+	libraries: createDefaultLibraries(),
+	enableGalleryView: false,
+	language: 'en',
 };
 
 export class SettingsManager {
 	private plugin: Plugin;
 	private settings: MediaGallerySettings;
+	private readonly listeners = new Set<() => void>();
 
 	constructor(plugin: Plugin) {
 		this.plugin = plugin;
@@ -66,7 +83,17 @@ export class SettingsManager {
 			| (Partial<MediaGallerySettings> & { pdfOpenWith?: 'obsidian' | 'system' })
 			| null;
 		const { pdfOpenWith, ...rest } = loaded ?? {};
-		this.settings = { ...DEFAULT_SETTINGS, ...rest };
+		this.settings = {
+			...DEFAULT_SETTINGS,
+			...rest,
+			libraries: normalizeLibraries(rest.libraries),
+		};
+
+		if (this.settings.language !== 'en' && this.settings.language !== 'es') {
+			this.settings.language = 'en';
+		}
+
+		this.settings.enableGalleryView = Boolean(this.settings.enableGalleryView);
 
 		if (loaded && loaded.openWith === undefined && pdfOpenWith) {
 			this.settings.openWith = pdfOpenWith;
@@ -77,6 +104,7 @@ export class SettingsManager {
 
 	async save(): Promise<void> {
 		await this.plugin.saveData(this.settings);
+		this.emitChange();
 	}
 
 	getSettings(): MediaGallerySettings {
@@ -85,6 +113,76 @@ export class SettingsManager {
 
 	updateSettings(partial: Partial<MediaGallerySettings>): void {
 		this.settings = { ...this.settings, ...partial };
+	}
+
+	onChange(listener: () => void): () => void {
+		this.listeners.add(listener);
+		return () => {
+			this.listeners.delete(listener);
+		};
+	}
+
+	getLibraries(): GalleryLibrary[] {
+		return this.settings.libraries;
+	}
+
+	addLibrary(): GalleryLibrary {
+		const index = this.settings.libraries.length + 1;
+		const library: GalleryLibrary = {
+			id: createId(),
+			name: translate(this.settings.language, 'libraryFallbackName', { index }),
+			type: 'image',
+			path: '',
+		};
+
+		this.settings = {
+			...this.settings,
+			libraries: [...this.settings.libraries, library],
+		};
+
+		return library;
+	}
+
+	removeLibrary(index: number): void {
+		if (index < 0 || index >= this.settings.libraries.length) return;
+
+		this.settings = {
+			...this.settings,
+			libraries: this.settings.libraries.filter((_, itemIndex) => itemIndex !== index),
+		};
+	}
+
+	reorderLibraries(oldIndex: number, newIndex: number): void {
+		const libraries = [...this.settings.libraries];
+		if (
+			oldIndex < 0 ||
+			oldIndex >= libraries.length ||
+			newIndex < 0 ||
+			newIndex >= libraries.length
+		) {
+			return;
+		}
+
+		const [moved] = libraries.splice(oldIndex, 1);
+		if (!moved) return;
+
+		libraries.splice(newIndex, 0, moved);
+		this.settings = { ...this.settings, libraries };
+	}
+
+	updateLibrary(id: string, partial: Partial<Omit<GalleryLibrary, 'id'>>): void {
+		this.settings = {
+			...this.settings,
+			libraries: this.settings.libraries.map((library) =>
+				library.id === id ? { ...library, ...partial } : library
+			),
+		};
+	}
+
+	private emitChange(): void {
+		for (const listener of this.listeners) {
+			listener();
+		}
 	}
 }
 
@@ -97,44 +195,67 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 	}
 
 	getSettingDefinitions(): SettingDefinitionItem[] {
+		const lang = this.manager.getSettings().language;
+
 		return [
 			{
 				type: 'group',
-				heading: 'Gallery defaults',
+				heading: translate(lang, 'sectionGeneral'),
 				items: [
 					{
-						name: 'Default gallery type',
-						desc: 'Type used when the code block does not specify one',
+						name: translate(lang, 'language'),
+						desc: translate(lang, 'languageDesc'),
+						control: {
+							type: 'dropdown',
+							key: 'language',
+							options: { en: 'English', es: 'Español' },
+						},
+					},
+					{
+						name: translate(lang, 'enableGalleryView'),
+						desc: translate(lang, 'enableGalleryViewDesc'),
+						control: { type: 'toggle', key: 'enableGalleryView' },
+					},
+				],
+			},
+			this.getLibraryDefinitions(lang),
+			{
+				type: 'group',
+				heading: translate(lang, 'sectionGalleryDefaults'),
+				items: [
+					{
+						name: translate(lang, 'defaultGalleryType'),
+						desc: translate(lang, 'defaultGalleryTypeDesc'),
 						control: {
 							type: 'dropdown',
 							key: 'defaultType',
 							options: {
-								video: 'Video',
-								image: 'Image',
-								pdf: 'PDF',
-								audio: 'Audio',
+								video: translate(lang, 'typeVideo'),
+								image: translate(lang, 'typeImage'),
+								pdf: translate(lang, 'typePdf'),
+								audio: translate(lang, 'typeAudio'),
 							},
 						},
 					},
 					{
-						name: 'Sort order',
-						desc: 'Order of the files inside the gallery',
+						name: translate(lang, 'sortOrder'),
+						desc: translate(lang, 'sortOrderDesc'),
 						control: {
 							type: 'dropdown',
 							key: 'sortOrder',
 							options: {
-								'name-asc': 'Name, ascending',
-								'name-desc': 'Name, descending',
-								'mtime-desc': 'Modified, newest first',
-								'mtime-asc': 'Modified, oldest first',
-								'size-desc': 'Size, largest first',
-								'size-asc': 'Size, smallest first',
+								'name-asc': translate(lang, 'sortNameAsc'),
+								'name-desc': translate(lang, 'sortNameDesc'),
+								'mtime-desc': translate(lang, 'sortMtimeDesc'),
+								'mtime-asc': translate(lang, 'sortMtimeAsc'),
+								'size-desc': translate(lang, 'sortSizeDesc'),
+								'size-asc': translate(lang, 'sortSizeAsc'),
 							},
 						},
 					},
 					{
-						name: 'Video extensions',
-						desc: 'Comma-separated list. This filters files, it does not add playback support: the file must also be decodable by Obsidian',
+						name: translate(lang, 'videoExtensions'),
+						desc: translate(lang, 'videoExtensionsDesc'),
 						control: {
 							type: 'textarea',
 							key: 'videoExtensions',
@@ -142,8 +263,8 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 						},
 					},
 					{
-						name: 'Image extensions',
-						desc: 'Comma-separated list of image file extensions',
+						name: translate(lang, 'imageExtensions'),
+						desc: translate(lang, 'imageExtensionsDesc'),
 						control: {
 							type: 'textarea',
 							key: 'imageExtensions',
@@ -151,8 +272,8 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 						},
 					},
 					{
-						name: 'PDF extensions',
-						desc: 'Comma-separated list of PDF file extensions',
+						name: translate(lang, 'pdfExtensions'),
+						desc: translate(lang, 'pdfExtensionsDesc'),
 						control: {
 							type: 'textarea',
 							key: 'pdfExtensions',
@@ -160,8 +281,8 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 						},
 					},
 					{
-						name: 'Audio extensions',
-						desc: 'Comma-separated list of audio file extensions',
+						name: translate(lang, 'audioExtensions'),
+						desc: translate(lang, 'audioExtensionsDesc'),
 						control: {
 							type: 'textarea',
 							key: 'audioExtensions',
@@ -170,14 +291,14 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 						},
 					},
 					{
-						name: 'Open files with',
-						desc: 'Where the open button and double-click send files: a new Obsidian tab or the system default app',
+						name: translate(lang, 'openFilesWith'),
+						desc: translate(lang, 'openFilesWithDesc'),
 						control: {
 							type: 'dropdown',
 							key: 'openWith',
 							options: {
-								obsidian: 'Obsidian tab',
-								system: 'System default app',
+								obsidian: translate(lang, 'openWithObsidian'),
+								system: translate(lang, 'openWithSystem'),
 							},
 						},
 					},
@@ -185,11 +306,11 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 			},
 			{
 				type: 'group',
-				heading: 'Appearance',
+				heading: translate(lang, 'sectionAppearance'),
 				items: [
 					{
-						name: 'Card height',
-						desc: 'Height of each row of cards, in pixels',
+						name: translate(lang, 'cardHeight'),
+						desc: translate(lang, 'cardHeightDesc'),
 						control: {
 							type: 'slider',
 							key: 'cardHeight',
@@ -199,18 +320,18 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 						},
 					},
 					{
-						name: 'Show file names',
-						desc: 'Display the file name below each card',
+						name: translate(lang, 'showFileNames'),
+						desc: translate(lang, 'showFileNamesDesc'),
 						control: { type: 'toggle', key: 'showFileNames' },
 					},
 					{
-						name: 'Overlay arrows',
-						desc: 'Show the side arrows in the image overlay. Tapping the edges always navigates',
+						name: translate(lang, 'overlayArrows'),
+						desc: translate(lang, 'overlayArrowsDesc'),
 						control: { type: 'toggle', key: 'overlayArrows' },
 					},
 					{
-						name: 'Custom thumbnail folder',
-						desc: 'Vault folder with your own thumbnails. Files are matched by name: clip.pdf uses clip.png',
+						name: translate(lang, 'customThumbnailFolder'),
+						desc: translate(lang, 'customThumbnailFolderDesc'),
 						control: {
 							type: 'text',
 							key: 'thumbnailFolder',
@@ -221,37 +342,37 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 			},
 			{
 				type: 'group',
-				heading: 'Video',
+				heading: translate(lang, 'sectionVideo'),
 				items: [
 					{
-						name: 'Show controls',
-						desc: 'Show the native playback controls (they appear on hover)',
+						name: translate(lang, 'videoControls'),
+						desc: translate(lang, 'videoControlsDesc'),
 						control: { type: 'toggle', key: 'videoControls' },
 					},
 					{
-						name: 'Muted by default',
-						desc: 'Start videos without sound',
+						name: translate(lang, 'videoMuted'),
+						desc: translate(lang, 'videoMutedDesc'),
 						control: { type: 'toggle', key: 'videoMuted' },
 					},
 					{
-						name: 'Autoplay',
-						desc: 'Browsers only allow autoplay when the video is muted',
+						name: translate(lang, 'videoAutoplay'),
+						desc: translate(lang, 'videoAutoplayDesc'),
 						control: { type: 'toggle', key: 'videoAutoplay' },
 					},
 					{
-						name: 'Loop',
-						desc: 'Restart videos when they reach the end',
+						name: translate(lang, 'videoLoop'),
+						desc: translate(lang, 'videoLoopDesc'),
 						control: { type: 'toggle', key: 'videoLoop' },
 					},
 				],
 			},
 			{
 				type: 'group',
-				heading: 'Audio',
+				heading: translate(lang, 'sectionAudio'),
 				items: [
 					{
-						name: 'Autoplay',
-						desc: 'Start playing the first track automatically when opening the overlay',
+						name: translate(lang, 'audioAutoplay'),
+						desc: translate(lang, 'audioAutoplayDesc'),
 						control: { type: 'toggle', key: 'audioAutoplay' },
 					},
 				],
@@ -259,16 +380,99 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 		];
 	}
 
+	private getLibraryDefinitions(lang: Language): SettingDefinitionItem {
+		const libraries = this.manager.getSettings().libraries;
+
+		return {
+			type: 'list',
+			heading: translate(lang, 'sectionLibraries'),
+			emptyState: translate(lang, 'noLibraries'),
+			items: libraries.map((library, index) => ({
+				name:
+					library.name.trim() ||
+					translate(lang, 'libraryFallbackName', { index: index + 1 }),
+				render: (setting: Setting) => {
+					setting.setName('');
+					setting.setDesc('');
+
+					setting.addText((text) =>
+						text
+							.setPlaceholder(translate(lang, 'libraryNamePlaceholder'))
+							.setValue(library.name)
+							.onChange(async (value) => {
+								this.manager.updateLibrary(library.id, { name: value });
+								await this.manager.save();
+							})
+					);
+
+					setting.addDropdown((dropdown) =>
+						dropdown
+							.addOption('image', translate(lang, 'typeImage'))
+							.addOption('pdf', translate(lang, 'typePdf'))
+							.addOption('video', translate(lang, 'typeVideo'))
+							.addOption('audio', translate(lang, 'typeAudio'))
+							.setValue(library.type)
+							.onChange(async (value) => {
+								this.manager.updateLibrary(library.id, {
+									type: value as GalleryType,
+								});
+								await this.manager.save();
+								this.update();
+							})
+					);
+
+					setting.addText((text) =>
+						text
+							.setPlaceholder(translate(lang, 'libraryPathPlaceholder'))
+							.setValue(library.path)
+							.onChange(async (value) => {
+								this.manager.updateLibrary(library.id, { path: value.trim() });
+								await this.manager.save();
+							})
+					);
+				},
+			})),
+			addItem: {
+				name: translate(lang, 'addLibrary'),
+				action: () => {
+					this.manager.addLibrary();
+					void this.manager.save();
+					this.update();
+				},
+			},
+			onDelete: (index) => {
+				this.manager.removeLibrary(index);
+				void this.manager.save();
+				this.update();
+			},
+			onReorder: (oldIndex, newIndex) => {
+				this.manager.reorderLibraries(oldIndex, newIndex);
+				void this.manager.save();
+				this.update();
+			},
+		};
+	}
+
 	getControlValue(key: string): unknown {
-		const settings = this.manager.getSettings() as unknown as Record<
-			string,
-			unknown
-		>;
+		const settings = this.manager.getSettings() as unknown as Record<string, unknown>;
 		const value = settings[key];
 		return Array.isArray(value) ? value.join(', ') : value;
 	}
 
 	async setControlValue(key: string, value: unknown): Promise<void> {
+		if (key === 'language') {
+			this.manager.updateSettings({ language: value === 'es' ? 'es' : 'en' });
+			await this.manager.save();
+			window.setTimeout(() => this.update(), 0);
+			return;
+		}
+
+		if (key === 'enableGalleryView') {
+			this.manager.updateSettings({ enableGalleryView: Boolean(value) });
+			await this.manager.save();
+			return;
+		}
+
 		const raw = typeof value === 'string' ? value : '';
 		let next: unknown = value;
 
@@ -281,231 +485,6 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 		this.manager.updateSettings({ [key]: next });
 		await this.manager.save();
 	}
-
-	display(): void {
-		const { containerEl } = this;
-		containerEl.empty();
-
-		const settings = this.manager.getSettings();
-		const update = async (partial: Partial<MediaGallerySettings>) => {
-			this.manager.updateSettings(partial);
-			await this.manager.save();
-		};
-
-		new Setting(containerEl).setName('Gallery defaults').setHeading();
-
-		new Setting(containerEl)
-			.setName('Default gallery type')
-			.setDesc('Type used when the code block does not specify one')
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOption('video', 'Video')
-					.addOption('image', 'Image')
-					.addOption('pdf', 'PDF')
-					.addOption('audio', 'Audio')
-					.setValue(settings.defaultType)
-					.onChange(async (value) => {
-						await update({
-							defaultType: value as 'video' | 'image' | 'pdf' | 'audio',
-						});
-					})
-			);
-
-		new Setting(containerEl)
-			.setName('Sort order')
-			.setDesc('Order of the files inside the gallery')
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOption('name-asc', 'Name, ascending')
-					.addOption('name-desc', 'Name, descending')
-					.addOption('mtime-desc', 'Modified, newest first')
-					.addOption('mtime-asc', 'Modified, oldest first')
-					.addOption('size-desc', 'Size, largest first')
-					.addOption('size-asc', 'Size, smallest first')
-					.setValue(settings.sortOrder)
-					.onChange(async (value) => {
-						await update({ sortOrder: value as SortOrder });
-					})
-			);
-
-		new Setting(containerEl)
-			.setName('Video extensions')
-			.setDesc(
-				'Comma-separated list. This filters files, it does not add playback support: the file must also be decodable by Obsidian'
-			)
-			.addTextArea((text) =>
-				text
-					.setPlaceholder('Mkv, mov, mp4, ogv, webm')
-					.setValue(settings.videoExtensions.join(', '))
-					.onChange(async (value) => {
-						await update({
-							videoExtensions: value
-								.split(',')
-								.map((s) => s.trim().toLowerCase().replace(/^\./, ''))
-								.filter((s) => s.length > 0),
-						});
-					})
-			);
-
-		new Setting(containerEl)
-			.setName('Image extensions')
-			.setDesc('Comma-separated list of image file extensions')
-			.addTextArea((text) =>
-				text
-					.setPlaceholder('Avif, bmp, GIF, JPEG, JPG, PNG, SVG, webp')
-					.setValue(settings.imageExtensions.join(', '))
-					.onChange(async (value) => {
-						await update({
-							imageExtensions: value
-								.split(',')
-								.map((s) => s.trim().toLowerCase().replace(/^\./, ''))
-								.filter((s) => s.length > 0),
-						});
-					})
-			);
-
-		new Setting(containerEl)
-			.setName('PDF extensions')
-			.setDesc('Comma-separated list of PDF file extensions')
-			.addTextArea((text) =>
-				text
-					.setPlaceholder('PDF')
-					.setValue(settings.pdfExtensions.join(', '))
-					.onChange(async (value) => {
-						await update({
-							pdfExtensions: parseExtensions(value),
-						});
-					})
-			);
-
-		new Setting(containerEl)
-			.setName('Audio extensions')
-			.setDesc('Comma-separated list of audio file extensions')
-			.addTextArea((text) =>
-				text
-					.setPlaceholder('Mp3, flac, ogg, oga, m4a, wav, aac, opus, wma, aiff, aif')
-					.setValue(settings.audioExtensions.join(', '))
-					.onChange(async (value) => {
-						await update({
-							audioExtensions: parseExtensions(value),
-						});
-					})
-			);
-
-		new Setting(containerEl)
-			.setName('Open files with')
-			.setDesc(
-				'Where the open button and double-click send files: a new Obsidian tab or the system default app'
-			)
-			.addDropdown((dropdown) =>
-				dropdown
-					.addOption('obsidian', 'Obsidian tab')
-					.addOption('system', 'System default app')
-					.setValue(settings.openWith)
-					.onChange(async (value) => {
-						await update({
-							openWith: value as 'obsidian' | 'system',
-						});
-					})
-			);
-
-		new Setting(containerEl).setName('Appearance').setHeading();
-
-		new Setting(containerEl)
-			.setName('Card height')
-			.setDesc('Height of each row of cards, in pixels')
-			.addSlider((slider) =>
-				slider
-					.setLimits(150, 500, 10)
-					.setValue(settings.cardHeight)
-					.onChange(async (value) => {
-						await update({ cardHeight: value });
-					})
-			);
-
-		new Setting(containerEl)
-			.setName('Show file names')
-			.setDesc('Display the file name below each card')
-			.addToggle((toggle) =>
-				toggle.setValue(settings.showFileNames).onChange(async (value) => {
-					await update({ showFileNames: value });
-				})
-			);
-
-		new Setting(containerEl)
-			.setName('Overlay arrows')
-			.setDesc(
-				'Show the side arrows in the image overlay. Tapping the edges always navigates'
-			)
-			.addToggle((toggle) =>
-				toggle.setValue(settings.overlayArrows).onChange(async (value) => {
-					await update({ overlayArrows: value });
-				})
-			);
-
-		new Setting(containerEl)
-			.setName('Custom thumbnail folder')
-			.setDesc(
-				'Vault folder with your own thumbnails. Files are matched by name: clip.pdf uses clip.png'
-			)
-			.addText((text) =>
-				text
-					.setPlaceholder('Attachments/thumbnails')
-					.setValue(settings.thumbnailFolder)
-					.onChange(async (value) => {
-						await update({ thumbnailFolder: value.trim() });
-					})
-			);
-
-		new Setting(containerEl).setName('Video').setHeading();
-
-		new Setting(containerEl)
-			.setName('Show controls')
-			.setDesc('Show the native playback controls (they appear on hover)')
-			.addToggle((toggle) =>
-				toggle.setValue(settings.videoControls).onChange(async (value) => {
-					await update({ videoControls: value });
-				})
-			);
-
-		new Setting(containerEl)
-			.setName('Muted by default')
-			.setDesc('Start videos without sound')
-			.addToggle((toggle) =>
-				toggle.setValue(settings.videoMuted).onChange(async (value) => {
-					await update({ videoMuted: value });
-				})
-			);
-
-		new Setting(containerEl)
-			.setName('Autoplay')
-			.setDesc('Browsers only allow autoplay when the video is muted')
-			.addToggle((toggle) =>
-				toggle.setValue(settings.videoAutoplay).onChange(async (value) => {
-					await update({ videoAutoplay: value });
-				})
-			);
-
-		new Setting(containerEl)
-			.setName('Loop')
-			.setDesc('Restart videos when they reach the end')
-			.addToggle((toggle) =>
-				toggle.setValue(settings.videoLoop).onChange(async (value) => {
-					await update({ videoLoop: value });
-				})
-			);
-
-		new Setting(containerEl).setName('Audio').setHeading();
-
-		new Setting(containerEl)
-			.setName('Autoplay')
-			.setDesc('Start playing the first track automatically when opening the overlay')
-			.addToggle((toggle) =>
-				toggle.setValue(settings.audioAutoplay).onChange(async (value) => {
-					await update({ audioAutoplay: value });
-				})
-			);
-	}
 }
 
 function parseExtensions(value: string): string[] {
@@ -513,4 +492,44 @@ function parseExtensions(value: string): string[] {
 		.split(',')
 		.map((item) => item.trim().toLowerCase().replace(/^\./, ''))
 		.filter((item) => item.length > 0);
+}
+
+function normalizeLibraries(value: unknown): GalleryLibrary[] {
+	if (!Array.isArray(value)) return createDefaultLibraries();
+
+	const seen = new Set<string>();
+	const libraries: GalleryLibrary[] = [];
+
+	for (const item of value) {
+		if (!item || typeof item !== 'object') continue;
+
+		const record = item as Record<string, unknown>;
+		const type = record.type;
+		if (!isGalleryType(type)) continue;
+
+		let id = typeof record.id === 'string' && record.id ? record.id : createId();
+		if (seen.has(id)) id = createId();
+		seen.add(id);
+
+		libraries.push({
+			id,
+			name: typeof record.name === 'string' ? record.name : '',
+			type,
+			path: typeof record.path === 'string' ? record.path : '',
+		});
+	}
+
+	return libraries;
+}
+
+function isGalleryType(value: unknown): value is GalleryType {
+	return value === 'image' || value === 'pdf' || value === 'video' || value === 'audio';
+}
+
+function createId(): string {
+	if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+		return crypto.randomUUID();
+	}
+
+	return `library-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
