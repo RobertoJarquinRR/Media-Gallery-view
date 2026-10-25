@@ -1,6 +1,6 @@
 {
 	"name": "Media-Gallery",
-	"version": "0.6.0",
+	"version": "0.7.0",
 	"description": "Make a gallery of your videos, images, PDFs and audio files",
 	"main": "main.js",
 	"type": "module",
