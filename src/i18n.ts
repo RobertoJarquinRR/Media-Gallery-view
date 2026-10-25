@@ -55,11 +55,13 @@ const EN = {
 
 	sectionAppearance: 'Appearance',
 	cardHeight: 'Card height',
-	cardHeightDesc: 'Height of each row of cards, in pixels',
+	cardHeightDesc:
+		'Height of each row of cards in the grid layouts, in pixels. Masonry ignores it and the fixed-ratio grid treats it as a minimum',
 	layoutMode: 'Layout mode',
 	layoutModeDesc: 'Choose how gallery items are arranged',
-	layoutMasonry: 'Masonry (variable height, column flow)',
-	layoutGrid: 'Grid (fixed aspect ratio, rows)',
+	layoutMasonry: 'Masonry / columns (variable height, column flow)',
+	layoutGrid: 'Grid (fixed height, rows)',
+	layoutGridRatio: 'Grid (fixed aspect ratio, rows)',
 	showFileNames: 'Show file names',
 	showFileNamesDesc: 'Display the file name below each card',
 	overlayArrows: 'Overlay arrows',
@@ -159,11 +161,13 @@ const ES: Record<TranslationKey, string> = {
 
 	sectionAppearance: 'Apariencia',
 	cardHeight: 'Altura de las tarjetas',
-	cardHeightDesc: 'Altura de cada fila de tarjetas, en píxeles',
+	cardHeightDesc:
+		'Altura de cada fila de tarjetas en los modos de cuadrícula, en píxeles. Masonry la ignora y la cuadrícula de proporción fija la usa como mínimo',
 	layoutMode: 'Modo de disposición',
 	layoutModeDesc: 'Elige cómo se organizan los elementos de la galería',
-	layoutMasonry: 'Masonry (altura variable, flujo en columnas)',
-	layoutGrid: 'Cuadrícula (proporción fija, filas)',
+	layoutMasonry: 'Masonry / columnas (altura variable, flujo en columnas)',
+	layoutGrid: 'Cuadrícula (altura fija, filas)',
+	layoutGridRatio: 'Cuadrícula (proporción fija, filas)',
 	showFileNames: 'Mostrar nombres',
 	showFileNamesDesc: 'Muestra el nombre del archivo debajo de cada tarjeta',
 	overlayArrows: 'Flechas del visor',

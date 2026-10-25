@@ -13,6 +13,8 @@ export class GalleryGrid {
 		this.element.className = className;
 		if (layoutMode === 'grid') {
 			this.element.classList.add('mg-layout-grid');
+		} else if (layoutMode === 'grid-ratio') {
+			this.element.classList.add('mg-layout-grid-ratio');
 		} else {
 			this.element.classList.add('mg-layout-masonry');
 		}
