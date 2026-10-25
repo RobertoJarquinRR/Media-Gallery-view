@@ -95,7 +95,11 @@ export class SettingsManager {
 			this.settings.language = 'en';
 		}
 
-		if (this.settings.layoutMode !== 'masonry' && this.settings.layoutMode !== 'grid') {
+		if (
+			this.settings.layoutMode !== 'masonry' &&
+			this.settings.layoutMode !== 'grid' &&
+			this.settings.layoutMode !== 'grid-ratio'
+		) {
 			this.settings.layoutMode = 'masonry';
 		}
 
@@ -334,6 +338,7 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 								options: {
 									masonry: translate(lang, 'layoutMasonry'),
 									grid: translate(lang, 'layoutGrid'),
+									'grid-ratio': translate(lang, 'layoutGridRatio'),
 								},
 							},
 						},

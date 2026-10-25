@@ -40,6 +40,33 @@
 	height: calc(100% - 30px);
 }
 
+.mg-gallery-grid.mg-layout-grid-ratio {
+	display: grid;
+	grid-template-columns: repeat(
+		auto-fill,
+		minmax(calc(var(--mg-card-height, 290px) * 4 / 3), 1fr)
+	);
+	gap: 5px;
+}
+
+.mg-gallery-grid.mg-layout-grid-ratio .mg-file-card {
+	width: 100%;
+	height: auto;
+	aspect-ratio: 4 / 3;
+	margin: 0;
+}
+
+.mg-gallery-grid.mg-layout-grid-ratio .mg-file-card .mg-media-element {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	background: var(--background-secondary);
+}
+
+.mg-gallery-grid.mg-layout-grid-ratio .mg-file-card.mg-has-info .mg-media-element {
+	height: calc(100% - 30px);
+}
+
 .mg-file-card {
 	display: flex;
 	flex-direction: column;
