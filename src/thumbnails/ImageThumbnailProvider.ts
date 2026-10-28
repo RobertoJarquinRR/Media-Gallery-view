@@ -38,7 +38,13 @@ export async function generateImageThumbnail(
 		targetSize >= 384 &&
 		data.byteLength <= PASSTHROUGH_MAX_BYTES
 	) {
-		return { data, width: 0, height: 0, extension: 'webp' };
+		const size = readWebpSize(data);
+		return {
+			data,
+			width: size?.width ?? 0,
+			height: size?.height ?? 0,
+			extension: 'webp',
+		};
 	}
 
 	const generated = await encodeImageBuffer(data, mime, targetSize, quality);
@@ -160,6 +166,55 @@ function copyToArrayBuffer(view: Uint8Array): ArrayBuffer {
 	const copy = new Uint8Array(view.byteLength);
 	copy.set(view);
 	return copy.buffer;
+}
+
+function readWebpSize(
+	data: ArrayBuffer
+): { width: number; height: number } | null {
+	if (data.byteLength < 30) return null;
+
+	const bytes = new Uint8Array(data);
+	const fourcc = (offset: number): string =>
+		String.fromCharCode(
+			bytes[offset] ?? 0,
+			bytes[offset + 1] ?? 0,
+			bytes[offset + 2] ?? 0,
+			bytes[offset + 3] ?? 0
+		);
+
+	if (fourcc(0) !== 'RIFF' || fourcc(8) !== 'WEBP') return null;
+
+	const chunk = fourcc(12);
+
+	if (chunk === 'VP8X') {
+		const width = 1 + ((bytes[24] ?? 0) | ((bytes[25] ?? 0) << 8) | ((bytes[26] ?? 0) << 16));
+		const height = 1 + ((bytes[27] ?? 0) | ((bytes[28] ?? 0) << 8) | ((bytes[29] ?? 0) << 16));
+		return width > 0 && height > 0 ? { width, height } : null;
+	}
+
+	if (chunk === 'VP8 ') {
+		if (bytes[23] !== 0x9d || bytes[24] !== 0x01 || bytes[25] !== 0x2a) {
+			return null;
+		}
+		const width = ((bytes[26] ?? 0) | ((bytes[27] ?? 0) << 8)) & 0x3fff;
+		const height = ((bytes[28] ?? 0) | ((bytes[29] ?? 0) << 8)) & 0x3fff;
+		return width > 0 && height > 0 ? { width, height } : null;
+	}
+
+	if (chunk === 'VP8L') {
+		if (bytes[20] !== 0x2f) return null;
+
+		const b1 = bytes[21] ?? 0;
+		const b2 = bytes[22] ?? 0;
+		const b3 = bytes[23] ?? 0;
+		const b4 = bytes[24] ?? 0;
+
+		const width = 1 + (((b2 & 0x3f) << 8) | b1);
+		const height = 1 + (((b4 & 0x0f) << 10) | (b3 << 2) | ((b2 & 0xc0) >> 6));
+		return width > 0 && height > 0 ? { width, height } : null;
+	}
+
+	return null;
 }
 
 function loadImage(url: string): Promise<HTMLImageElement> {
