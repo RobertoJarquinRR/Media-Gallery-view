@@ -338,6 +338,19 @@
 	background: var(--background-secondary);
 }
 
+.mg-gallery-grid .mg-file-card .mg-media-element.mg-media-preview {
+	background-image: var(--mg-preview-image);
+	background-position: center;
+	background-repeat: no-repeat;
+	background-size: cover;
+}
+
+.mg-gallery-grid.mg-layout-grid
+	.mg-file-card
+	.mg-media-element.mg-media-preview {
+	background-size: contain;
+}
+
 .mg-file-card.mg-card-vertical {
 	flex: 0 0 auto;
 }

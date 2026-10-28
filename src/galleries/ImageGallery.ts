@@ -180,7 +180,7 @@ export class ImageGallery implements GalleryProcessor {
 			if (!job.card.getElement().isConnected) continue;
 			if (thumbnails.getKnown(job.item.file)) continue;
 
-			job.card.setMediaSource(preview);
+			job.card.setPreviewSource(preview);
 		}
 	}
 

@@ -24,6 +24,7 @@ export class FileCard {
 	private readonly infoElement: HTMLDivElement | null;
 	private mediaRatio: number | null = null;
 	private ratioKnown = false;
+	private previewSrc: string | null = null;
 
 	constructor(private readonly app: App, options: FileCardOptions) {
 		this.element = this.createCard(options);
@@ -87,6 +88,14 @@ export class FileCard {
 		return element;
 	}
 
+	setPreviewSource(src: string): void {
+		this.previewSrc = src;
+		this.mediaElement.classList.add('mg-media-preview');
+		this.mediaElement.setCssProps({
+			'--mg-preview-image': `url("${src.replace(/"/g, '%22')}")`,
+		});
+	}
+
 	setMediaSource(src: string, width?: number, height?: number): void {
 		if (width && height) {
 			this.mediaElement.setAttribute('width', String(width));
@@ -103,9 +112,20 @@ export class FileCard {
 	}
 
 	private attachMediaRatioTracking(): void {
-		const handler = (): void => this.syncRatioFromMedia();
+		const handler = (): void => {
+			this.clearPreviewBackground();
+			this.syncRatioFromMedia();
+		};
 		this.mediaElement.addEventListener('load', handler);
 		this.mediaElement.addEventListener('loadedmetadata', handler);
+	}
+
+	private clearPreviewBackground(): void {
+		if (!this.previewSrc) return;
+
+		this.previewSrc = null;
+		this.mediaElement.classList.remove('mg-media-preview');
+		this.mediaElement.setCssProps({ '--mg-preview-image': 'none' });
 	}
 
 	private syncRatioFromMedia(): void {

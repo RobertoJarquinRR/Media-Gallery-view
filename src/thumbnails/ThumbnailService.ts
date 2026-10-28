@@ -443,8 +443,33 @@ export class ThumbnailService implements ThumbnailResolver {
 
 			if (parsed.version !== CACHE_VERSION || !parsed.entries) return;
 			Object.assign(this.cache.entries, parsed.entries);
+			this.hydrateKnownFromCache();
 		} catch (error) {
 			console.error('[MediaGallery] Could not load the thumbnail cache', error);
+		}
+	}
+
+	private hydrateKnownFromCache(): void {
+		for (const [path, entry] of Object.entries(this.cache.entries)) {
+			if (this.known.has(path)) continue;
+			if (!entry.file || entry.failedAt) continue;
+
+			let src: string;
+			try {
+				src = this.app.vault.adapter.getResourcePath(entry.file);
+			} catch {
+				continue;
+			}
+			if (!src) continue;
+
+			const width = entry.width && entry.width > 0 ? entry.width : undefined;
+			const height = entry.height && entry.height > 0 ? entry.height : undefined;
+
+			this.known.set(path, {
+				info: { src, width, height, source: 'generated' },
+				mtime: entry.mtime,
+				size: entry.size,
+			});
 		}
 	}
 
