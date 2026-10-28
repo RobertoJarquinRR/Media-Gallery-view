@@ -81,6 +81,7 @@ export class PdfGallery implements GalleryProcessor {
 						if (this.viewer === viewer) this.viewer = null;
 						viewer.destroy();
 					},
+					zoom: viewer,
 				};
 			},
 			thumbSrc: (item) => thumbnails.getKnown(item.file)?.src,

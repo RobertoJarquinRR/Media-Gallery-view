@@ -1,10 +1,13 @@
 import { App } from 'obsidian';
 import { GalleryFile } from '../core/types';
+import { ImageZoomController } from './ImageZoomController';
+import type { OverlayZoomHandle } from './zoomTypes';
 
 export type OverlayMediaType = 'image' | 'video' | 'pdf' | 'audio';
 
 export interface OverlayContentHandle {
 	destroy(): void;
+	zoom?: OverlayZoomHandle;
 }
 
 export interface OverlayOptions {
@@ -31,7 +34,14 @@ export class OverlayManager {
 	private toggleButton: HTMLButtonElement | null = null;
 	private openButton: HTMLButtonElement | null = null;
 	private closeButton: HTMLButtonElement | null = null;
+	private zoomToggle: HTMLButtonElement | null = null;
+	private zoomControls: HTMLDivElement | null = null;
+	private zoomOutButton: HTMLButtonElement | null = null;
+	private zoomPercentButton: HTMLButtonElement | null = null;
+	private zoomInButton: HTMLButtonElement | null = null;
 	private contentHandle: OverlayContentHandle | null = null;
+	private zoomHandle: OverlayZoomHandle | null = null;
+	private zoomMode = false;
 	private thumbCenterFrame: number | null = null;
 
 	private items: GalleryFile[] = [];
@@ -62,6 +72,7 @@ export class OverlayManager {
 		this.items = items;
 		this.index = Math.max(0, Math.min(index, items.length - 1));
 		this.mediaType = mediaType;
+		this.zoomMode = false;
 
 		this.renderThumbs();
 		this.renderCurrent();
@@ -75,6 +86,7 @@ export class OverlayManager {
 	}
 
 	close(): void {
+		this.setZoomMode(false);
 		this.pauseMedia();
 		this.destroyContent();
 		this.overlay?.classList.add('is-hidden');
@@ -95,6 +107,12 @@ export class OverlayManager {
 		this.toggleButton = null;
 		this.openButton = null;
 		this.closeButton = null;
+		this.zoomToggle = null;
+		this.zoomControls = null;
+		this.zoomOutButton = null;
+		this.zoomPercentButton = null;
+		this.zoomInButton = null;
+		this.zoomHandle = null;
 	}
 
 	private getDocument(): Document {
@@ -152,7 +170,64 @@ const next = this.createEdge(doc, 'right', '\u203A', 'Next');
 			this.close();
 		});
 
+		this.zoomToggle = doc.createElement('button');
+		this.zoomToggle.type = 'button';
+		this.zoomToggle.className = 'mg-overlay-toggle';
+		this.zoomToggle.textContent = '\u2315';
+		this.zoomToggle.setAttribute('aria-label', 'Toggle zoom');
+		this.zoomToggle.setAttribute('aria-pressed', 'false');
+		this.zoomToggle.title = 'Zoom';
+		this.zoomToggle.addEventListener('click', (event) => {
+			event.stopPropagation();
+			this.setZoomMode(!this.zoomMode);
+		});
+
+		this.zoomControls = doc.createElement('div');
+		this.zoomControls.className = 'mg-overlay-zoom-controls is-hidden';
+
+		this.zoomOutButton = doc.createElement('button');
+		this.zoomOutButton.type = 'button';
+		this.zoomOutButton.className = 'mg-overlay-zoom-button';
+		this.zoomOutButton.textContent = '\u2212';
+		this.zoomOutButton.setAttribute('aria-label', 'Zoom out');
+		this.zoomOutButton.title = 'Zoom out';
+		this.zoomOutButton.addEventListener('click', (event) => {
+			event.stopPropagation();
+			this.zoomHandle?.zoomOut();
+			this.syncZoomUi();
+		});
+
+		this.zoomPercentButton = doc.createElement('button');
+		this.zoomPercentButton.type = 'button';
+		this.zoomPercentButton.className = 'mg-overlay-zoom-percent';
+		this.zoomPercentButton.textContent = '100%';
+		this.zoomPercentButton.setAttribute('aria-label', 'Reset zoom');
+		this.zoomPercentButton.title = 'Reset zoom';
+		this.zoomPercentButton.addEventListener('click', (event) => {
+			event.stopPropagation();
+			this.zoomHandle?.reset();
+			this.syncZoomUi();
+		});
+
+		this.zoomInButton = doc.createElement('button');
+		this.zoomInButton.type = 'button';
+		this.zoomInButton.className = 'mg-overlay-zoom-button';
+		this.zoomInButton.textContent = '+';
+		this.zoomInButton.setAttribute('aria-label', 'Zoom in');
+		this.zoomInButton.title = 'Zoom in';
+		this.zoomInButton.addEventListener('click', (event) => {
+			event.stopPropagation();
+			this.zoomHandle?.zoomIn();
+			this.syncZoomUi();
+		});
+
+		this.zoomControls.appendChild(this.zoomOutButton);
+		this.zoomControls.appendChild(this.zoomPercentButton);
+		this.zoomControls.appendChild(this.zoomInButton);
+
 		toolbar.appendChild(this.counter);
+		toolbar.appendChild(this.zoomToggle);
+		toolbar.appendChild(this.zoomControls);
 		toolbar.appendChild(this.openButton);
 		toolbar.appendChild(this.toggleButton);
 		toolbar.appendChild(this.closeButton);
@@ -180,6 +255,12 @@ const next = this.createEdge(doc, 'right', '\u203A', 'Next');
 			if (event.target !== this.overlay) return;
 			this.close();
 		});
+
+		this.overlay.addEventListener(
+			'wheel',
+			(event) => this.handleZoomWheel(event),
+			{ passive: false }
+		);
 
 		this.stage.addEventListener('click', (event) => {
 			const target = event.target as HTMLElement;
@@ -260,14 +341,21 @@ private createEdge(
 		if (!item) return;
 
 		this.pauseMedia();
+		this.zoomHandle?.reset();
+		this.zoomHandle = null;
 		this.destroyContent();
 		this.stage.empty();
 		this.stage.classList.toggle('mg-overlay-stage-pdf', this.mediaType === 'pdf');
+		this.stage.classList.toggle(
+			'mg-overlay-stage-image',
+			this.mediaType === 'image'
+		);
 		this.overlay?.classList.toggle('is-pdf', this.mediaType === 'pdf');
 
 		if (this.options.renderContent) {
 			this.contentHandle =
 				this.options.renderContent(item, this.stage, this.mediaType) ?? null;
+			this.zoomHandle = this.contentHandle?.zoom ?? null;
 		} else {
 			const doc = this.getDocument();
 			const media = doc.createElement(this.mediaType === 'video' ? 'video' : 'img');
@@ -280,8 +368,25 @@ private createEdge(
 
 			(media as HTMLImageElement | HTMLMediaElement).src = item.resourcePath;
 			this.stage.appendChild(media);
+
+			if (this.mediaType === 'image') {
+				(media as HTMLImageElement).draggable = false;
+				this.zoomHandle = new ImageZoomController(
+					this.stage,
+					media as HTMLImageElement
+				);
+			}
 		}
 
+		if (this.zoomHandle) {
+			this.zoomHandle.setOnChange?.(() => this.syncZoomUi());
+			this.zoomHandle.reset();
+			this.zoomHandle.setMode(this.zoomMode);
+		} else {
+			this.zoomMode = false;
+		}
+
+		this.applyZoomUi();
 		this.counter.textContent = `${this.index + 1} / ${this.items.length}`;
 		this.updateThumbSelection();
 	}
@@ -416,6 +521,69 @@ private createEdge(
 		this.options.onArrowsVisibleChange(visible);
 	}
 
+	private setZoomMode(enabled: boolean): void {
+		const next = enabled && this.zoomHandle !== null;
+		this.zoomMode = next;
+		this.zoomHandle?.setMode(next);
+		if (!next) {
+			this.zoomHandle?.reset();
+		}
+		this.overlay?.classList.toggle('mg-zoom-mode', next);
+		this.applyZoomUi();
+	}
+
+	private applyZoomUi(): void {
+		const available = this.zoomHandle !== null;
+
+		this.overlay?.classList.toggle('mg-zoom-mode', this.zoomMode);
+		this.zoomToggle?.classList.toggle('is-hidden', !available);
+		this.zoomToggle?.classList.toggle('is-active', this.zoomMode);
+		this.zoomToggle?.setAttribute('aria-pressed', String(this.zoomMode));
+		this.zoomControls?.classList.toggle(
+			'is-hidden',
+			!available || !this.zoomMode
+		);
+		this.syncZoomUi();
+	}
+
+	private syncZoomUi(): void {
+		if (!this.zoomPercentButton || !this.zoomOutButton || !this.zoomInButton) {
+			return;
+		}
+
+		if (!this.zoomHandle || !this.zoomMode) {
+			this.zoomPercentButton.textContent = '100%';
+			this.zoomOutButton.disabled = true;
+			this.zoomInButton.disabled = true;
+			return;
+		}
+
+		const zoom = this.zoomHandle.getZoom();
+		this.zoomPercentButton.textContent = `${Math.round(zoom * 100)}%`;
+		this.zoomOutButton.disabled =
+			zoom <= this.zoomHandle.getMinZoom() + 0.001;
+		this.zoomInButton.disabled =
+			zoom >= this.zoomHandle.getMaxZoom() - 0.001;
+	}
+
+	private handleZoomWheel(event: WheelEvent): void {
+		if (!this.zoomMode || !this.zoomHandle?.handleWheel) return;
+
+		const target = event.target as HTMLElement | null;
+		if (
+			target?.closest?.(
+				'.mg-overlay-toolbar, .mg-overlay-thumbs, .mg-overlay-edge, .mg-pdf-toolbar'
+			)
+		) {
+			return;
+		}
+
+		if (this.zoomHandle.handleWheel(event)) {
+			event.preventDefault();
+			this.syncZoomUi();
+		}
+	}
+
 	private applyArrowsVisibility(): void {
 		this.overlay?.classList.toggle('mg-arrows-hidden', !this.options.arrowsVisible);
 		this.toggleButton?.classList.toggle('is-active', this.options.arrowsVisible);
@@ -444,9 +612,37 @@ private createEdge(
 
 		if (this.options.onKeyDown?.(event)) return;
 
+		if (this.zoomMode && this.zoomHandle) {
+			switch (event.key) {
+				case '+':
+				case '=':
+					event.preventDefault();
+					this.zoomHandle.zoomIn();
+					this.syncZoomUi();
+					return;
+				case '-':
+				case '_':
+					event.preventDefault();
+					this.zoomHandle.zoomOut();
+					this.syncZoomUi();
+					return;
+				case '0':
+					event.preventDefault();
+					this.zoomHandle.reset();
+					this.syncZoomUi();
+					return;
+				default:
+					break;
+			}
+		}
+
 		switch (event.key) {
 			case 'Escape':
-				this.close();
+				if (this.zoomMode) {
+					this.setZoomMode(false);
+				} else {
+					this.close();
+				}
 				break;
 			case 'ArrowLeft':
 				event.preventDefault();
