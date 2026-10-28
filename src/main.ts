@@ -13,6 +13,7 @@ import {
 	GalleryRegistry,
 	GalleryRenderOptions,
 	GalleryType,
+	LayoutMode,
 	parseGallerySource,
 	validateConfig,
 } from './core';
@@ -160,7 +161,8 @@ export default class MediaGallery extends Plugin {
 
 	renderLibrary(
 		config: GalleryConfig,
-		container: HTMLElement
+		container: HTMLElement,
+		layoutMode?: LayoutMode
 	): GalleryProcessor | null {
 		const settings = this.settingsManager.getSettings();
 		const language = settings.language;
@@ -191,14 +193,20 @@ export default class MediaGallery extends Plugin {
 		);
 
 		this.thumbnails.setCustomFolder(settings.thumbnailFolder);
-		processor.process(files, container, this.app, this.buildRenderOptions(settings, type));
+		processor.process(
+			files,
+			container,
+			this.app,
+			this.buildRenderOptions(settings, type, layoutMode)
+		);
 
 		return processor;
 	}
 
 	private buildRenderOptions(
 		settings: MediaGallerySettings,
-		type: GalleryType
+		type: GalleryType,
+		layoutMode?: LayoutMode
 	): GalleryRenderOptions {
 		const language = settings.language;
 
@@ -222,7 +230,7 @@ export default class MediaGallery extends Plugin {
 				empty: translate(language, EMPTY_LABEL_KEYS[type]),
 				thumbnailsUnavailable: translate(language, 'thumbnailsUnavailable'),
 			},
-			layoutMode: settings.layoutMode,
+			layoutMode: layoutMode ?? settings.layoutMode,
 		};
 	}
 

@@ -480,16 +480,17 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 				render: (setting: Setting) => {
 					setting.setName('');
 					setting.setDesc('');
+					setting.setClass('mg-library-setting');
 
-					setting.addText((text) =>
-						text
-							.setPlaceholder(translate(lang, 'libraryNamePlaceholder'))
+					setting.addText((text) => {
+						text.inputEl.addClass('mg-library-name');
+						text.setPlaceholder(translate(lang, 'libraryNamePlaceholder'))
 							.setValue(library.name)
 							.onChange(async (value) => {
 								this.manager.updateLibrary(library.id, { name: value });
 								await this.manager.save();
-							})
-					);
+							});
+					});
 
 					setting.addDropdown((dropdown) =>
 						dropdown
@@ -507,15 +508,31 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 							})
 					);
 
-					setting.addText((text) =>
-						text
-							.setPlaceholder(translate(lang, 'libraryPathPlaceholder'))
+					setting.addDropdown((dropdown) =>
+						dropdown
+							.addOption('', translate(lang, 'libraryLayoutDefault'))
+							.addOption('masonry', translate(lang, 'layoutMasonry'))
+							.addOption('grid', translate(lang, 'layoutGrid'))
+							.addOption('grid-ratio', translate(lang, 'layoutGridRatio'))
+							.setValue(library.layoutMode ?? '')
+							.onChange(async (value) => {
+								this.manager.updateLibrary(library.id, {
+									layoutMode: isLayoutMode(value) ? value : undefined,
+								});
+								await this.manager.save();
+								this.update();
+							})
+					);
+
+					setting.addText((text) => {
+						text.inputEl.addClass('mg-library-path');
+						text.setPlaceholder(translate(lang, 'libraryPathPlaceholder'))
 							.setValue(library.path)
 							.onChange(async (value) => {
 								this.manager.updateLibrary(library.id, { path: value.trim() });
 								await this.manager.save();
-							})
-					);
+							});
+					});
 				},
 			})),
 			addItem: {
@@ -621,6 +638,9 @@ function normalizeLibraries(value: unknown): GalleryLibrary[] {
 			name: typeof record.name === 'string' ? record.name : '',
 			type,
 			path: typeof record.path === 'string' ? record.path : '',
+			layoutMode: isLayoutMode(record.layoutMode)
+				? record.layoutMode
+				: undefined,
 		});
 	}
 
@@ -629,6 +649,10 @@ function normalizeLibraries(value: unknown): GalleryLibrary[] {
 
 function isGalleryType(value: unknown): value is GalleryType {
 	return value === 'image' || value === 'pdf' || value === 'video' || value === 'audio';
+}
+
+function isLayoutMode(value: unknown): value is LayoutMode {
+	return value === 'masonry' || value === 'grid' || value === 'grid-ratio';
 }
 
 function clampNumber(

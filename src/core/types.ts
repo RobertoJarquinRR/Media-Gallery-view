@@ -8,6 +8,7 @@ export interface GalleryLibrary {
 	name: string;
 	type: GalleryType;
 	path: string;
+	layoutMode?: LayoutMode;
 }
 
 export interface GalleryConfig {

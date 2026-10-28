@@ -729,3 +729,28 @@
 .mg-library-setting {
 	align-items: center;
 }
+
+.mg-library-setting .setting-item-info {
+	display: none;
+}
+
+.mg-library-setting .setting-item-control {
+	flex: 1 1 auto;
+	flex-wrap: wrap;
+	justify-content: flex-start;
+	gap: 6px;
+}
+
+.mg-library-setting .mg-library-name {
+	flex: 1 1 140px;
+	min-width: 110px;
+}
+
+.mg-library-setting .mg-library-path {
+	flex: 1 1 100%;
+	min-width: 0;
+}
+
+.mg-library-setting select.dropdown {
+	max-width: 100%;
+}

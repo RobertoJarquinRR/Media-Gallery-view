@@ -174,7 +174,8 @@ export class MediaGalleryView extends ItemView {
 
 		const processor = this.plugin.renderLibrary(
 			{ path: library.path.trim(), type: library.type },
-			element
+			element,
+			library.layoutMode
 		);
 
 		if (!processor) {
@@ -239,6 +240,7 @@ export class MediaGalleryView extends ItemView {
 			settings.audioAutoplay,
 			settings.overlayArrows,
 			settings.layoutMode,
+			library.layoutMode ?? '',
 		].join('|');
 	}
 
