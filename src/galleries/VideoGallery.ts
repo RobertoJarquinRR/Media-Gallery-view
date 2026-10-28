@@ -34,7 +34,12 @@ export class VideoGallery implements GalleryProcessor {
 			'mg-gallery-grid',
 			container.ownerDocument,
 			options.cardHeight,
-			options.layoutMode
+			options.layoutMode,
+			{
+				columns: options.masonryColumns,
+				gap: options.masonryGap,
+				minWidth: options.masonryMinWidth,
+			}
 		);
 
 		container.empty();
@@ -86,6 +91,7 @@ export class VideoGallery implements GalleryProcessor {
 				mediaTag: 'video',
 				mediaAttributes,
 				showFileName: options.showFileNames,
+				fallbackAspectRatio: 16 / 9,
 				doubleClickMedia: true,
 				onClick: (clicked: TFile, event: MouseEvent) => {
 					if (this.isInControlsBand(event, options.videoControls)) {

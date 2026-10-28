@@ -77,6 +77,10 @@ export class ThumbnailService implements ThumbnailResolver {
 	private readonly previewPending = new Map<string, Promise<string | null>>();
 	private readonly previews = new Map<string, string>();
 	private readonly custom = new Map<string, TFile>();
+	private readonly customSizes = new Map<
+		string,
+		{ width: number; height: number } | null
+	>();
 	private readonly blobUrls = new Set<string>();
 	private readonly queue: Array<{ run: () => void; priority: number }> = [];
 	private customFolder = '';
@@ -206,6 +210,7 @@ export class ThumbnailService implements ThumbnailResolver {
 		this.previewPending.clear();
 		this.known.clear();
 		this.pending.clear();
+		this.customSizes.clear();
 		this.queue.length = 0;
 
 		disposeImageWorkerPool();
@@ -221,8 +226,15 @@ export class ThumbnailService implements ThumbnailResolver {
 
 		const customFile = this.custom.get(file.basename.toLowerCase());
 		if (customFile) {
+			const src = this.app.vault.getResourcePath(customFile);
+			const size = await this.measureResource(
+				src,
+				`${customFile.path}:${customFile.stat.mtime}:${customFile.stat.size}`
+			);
 			const info: ThumbnailInfo = {
-				src: this.app.vault.getResourcePath(customFile),
+				src,
+				width: size?.width,
+				height: size?.height,
 				source: 'custom',
 			};
 			this.known.set(file.path, {
@@ -358,7 +370,36 @@ export class ThumbnailService implements ThumbnailResolver {
 		const src = await this.getResourceUrl(path);
 		if (!src) return null;
 
-		return { src, width, height, source: 'generated' };
+		const safeWidth = width && width > 0 ? width : undefined;
+		const safeHeight = height && height > 0 ? height : undefined;
+		return { src, width: safeWidth, height: safeHeight, source: 'generated' };
+	}
+
+	private async measureResource(
+		src: string,
+		cacheKey: string
+	): Promise<{ width: number; height: number } | null> {
+		if (this.customSizes.has(cacheKey)) {
+			return this.customSizes.get(cacheKey) ?? null;
+		}
+
+		const size = await new Promise<{ width: number; height: number } | null>(
+			(resolve) => {
+				const image = activeDocument.createElement('img');
+				image.onload = () => {
+					resolve(
+						image.naturalWidth > 0 && image.naturalHeight > 0
+							? { width: image.naturalWidth, height: image.naturalHeight }
+							: null
+					);
+				};
+				image.onerror = () => resolve(null);
+				image.src = src;
+			}
+		);
+
+		this.customSizes.set(cacheKey, size);
+		return size;
 	}
 
 	private async getResourceUrl(path: string): Promise<string | null> {
@@ -402,8 +443,33 @@ export class ThumbnailService implements ThumbnailResolver {
 
 			if (parsed.version !== CACHE_VERSION || !parsed.entries) return;
 			Object.assign(this.cache.entries, parsed.entries);
+			this.hydrateKnownFromCache();
 		} catch (error) {
 			console.error('[MediaGallery] Could not load the thumbnail cache', error);
+		}
+	}
+
+	private hydrateKnownFromCache(): void {
+		for (const [path, entry] of Object.entries(this.cache.entries)) {
+			if (this.known.has(path)) continue;
+			if (!entry.file || entry.failedAt) continue;
+
+			let src: string;
+			try {
+				src = this.app.vault.adapter.getResourcePath(entry.file);
+			} catch {
+				continue;
+			}
+			if (!src) continue;
+
+			const width = entry.width && entry.width > 0 ? entry.width : undefined;
+			const height = entry.height && entry.height > 0 ? entry.height : undefined;
+
+			this.known.set(path, {
+				info: { src, width, height, source: 'generated' },
+				mtime: entry.mtime,
+				size: entry.size,
+			});
 		}
 	}
 

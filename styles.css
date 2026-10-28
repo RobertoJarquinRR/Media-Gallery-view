@@ -1,19 +1,30 @@
 .mg-gallery-grid.mg-layout-masonry {
-	column-width: 220px;
-	column-gap: 5px;
+	position: relative;
+}
+
+.mg-gallery-grid.mg-layout-masonry.mg-masonry-initializing .mg-file-card {
+	display: none;
 }
 
 .mg-gallery-grid.mg-layout-masonry .mg-file-card {
-	width: 100%;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: var(--mg-masonry-card-width, 220px);
 	height: auto;
-	margin: 0 0 5px;
-	break-inside: avoid;
+	margin: 0;
+	contain: layout paint;
 }
 
 .mg-gallery-grid.mg-layout-masonry .mg-file-card .mg-media-element {
 	width: 100%;
 	height: auto;
 	object-fit: cover;
+}
+
+.mg-gallery-grid.mg-layout-masonry .mg-file-card.mg-card-vertical .mg-media-element,
+.mg-gallery-grid.mg-layout-masonry .mg-file-card.mg-card-audio .mg-media-element {
+	object-fit: contain;
 }
 
 .mg-gallery-grid.mg-layout-grid {
@@ -327,13 +338,21 @@
 	background: var(--background-secondary);
 }
 
-.mg-file-card.mg-card-vertical {
-	flex: 0 0 auto;
-	width: 100%;
+.mg-gallery-grid .mg-file-card .mg-media-element.mg-media-preview {
+	background-image: var(--mg-preview-image);
+	background-position: center;
+	background-repeat: no-repeat;
+	background-size: cover;
 }
 
-.mg-file-card.mg-card-vertical.mg-has-info {
-	width: 100%;
+.mg-gallery-grid.mg-layout-grid
+	.mg-file-card
+	.mg-media-element.mg-media-preview {
+	background-size: contain;
+}
+
+.mg-file-card.mg-card-vertical {
+	flex: 0 0 auto;
 }
 
 .mg-file-card.mg-card-vertical .mg-media-element {

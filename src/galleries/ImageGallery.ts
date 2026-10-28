@@ -52,7 +52,12 @@ export class ImageGallery implements GalleryProcessor {
 			'mg-gallery-grid',
 			container.ownerDocument,
 			options.cardHeight,
-			options.layoutMode
+			options.layoutMode,
+			{
+				columns: options.masonryColumns,
+				gap: options.masonryGap,
+				minWidth: options.masonryMinWidth,
+			}
 		);
 
 		container.empty();
@@ -114,6 +119,7 @@ export class ImageGallery implements GalleryProcessor {
 				mediaTag: 'img' as const,
 				mediaAttributes: { alt: item.file.basename },
 				showFileName: options.showFileNames,
+				fallbackAspectRatio: 4 / 3,
 				doubleClickMedia: true,
 				onClick: (file: TFile) => {
 					const index = files.findIndex((entry) => entry.file.path === file.path);
@@ -131,7 +137,7 @@ export class ImageGallery implements GalleryProcessor {
 
 			const known = thumbnails.getKnown(item.file);
 			if (known) {
-				card.setMediaSource(known.src);
+				card.setMediaSource(known.src, known.width, known.height);
 				continue;
 			}
 
@@ -174,7 +180,7 @@ export class ImageGallery implements GalleryProcessor {
 			if (!job.card.getElement().isConnected) continue;
 			if (thumbnails.getKnown(job.item.file)) continue;
 
-			job.card.setMediaSource(preview);
+			job.card.setPreviewSource(preview);
 		}
 	}
 
@@ -219,7 +225,7 @@ export class ImageGallery implements GalleryProcessor {
 		try {
 			const info = await thumbnails.resolve(item.file, 'image', priority);
 			if (!info || !card.getElement().isConnected) return;
-			card.setMediaSource(info.src);
+			card.setMediaSource(info.src, info.width, info.height);
 		} catch (error) {
 			console.error(
 				`[MediaGallery] Could not resolve thumbnail for ${item.file.path}`,

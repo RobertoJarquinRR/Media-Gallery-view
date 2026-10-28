@@ -8,6 +8,7 @@ export interface FileCardOptions {
 	showFileName: boolean;
 	mediaWidth?: number;
 	mediaHeight?: number;
+	fallbackAspectRatio?: number;
 	doubleClickMedia?: boolean;
 	onClick?: (file: TFile, event: MouseEvent) => void;
 	onDoubleClick?: (file: TFile, event: MouseEvent) => void;
@@ -21,6 +22,9 @@ export class FileCard {
 	private readonly element: HTMLDivElement;
 	private readonly mediaElement: HTMLElement;
 	private readonly infoElement: HTMLDivElement | null;
+	private mediaRatio: number | null = null;
+	private ratioKnown = false;
+	private previewSrc: string | null = null;
 
 	constructor(private readonly app: App, options: FileCardOptions) {
 		this.element = this.createCard(options);
@@ -29,11 +33,22 @@ export class FileCard {
 			? this.createInfoElement(options.file)
 			: null;
 
+		const knownSize = Boolean(options.mediaWidth && options.mediaHeight);
+		const initialRatio = knownSize
+			? (options.mediaWidth as number) / (options.mediaHeight as number)
+			: options.fallbackAspectRatio;
+		if (initialRatio) {
+			this.applyMediaRatio(initialRatio, knownSize);
+		}
+
+		this.attachMediaRatioTracking();
+
 		this.element.appendChild(this.mediaElement);
 		if (this.infoElement) {
 			this.element.appendChild(this.infoElement);
 		}
 
+		this.syncRatioFromMedia();
 		this.attachEvents(options);
 	}
 
@@ -73,14 +88,78 @@ export class FileCard {
 		return element;
 	}
 
+	setPreviewSource(src: string): void {
+		this.previewSrc = src;
+		this.mediaElement.classList.add('mg-media-preview');
+		this.mediaElement.setCssProps({
+			'--mg-preview-image': `url("${src.replace(/"/g, '%22')}")`,
+		});
+	}
+
 	setMediaSource(src: string, width?: number, height?: number): void {
 		if (width && height) {
 			this.mediaElement.setAttribute('width', String(width));
 			this.mediaElement.setAttribute('height', String(height));
+			this.applyMediaRatio(width / height, true);
 		}
 
 		this.mediaElement.classList.remove('mg-media-pending');
 		(this.mediaElement as HTMLImageElement | HTMLMediaElement).src = src;
+
+		if (!this.ratioKnown) {
+			this.syncRatioFromMedia();
+		}
+	}
+
+	private attachMediaRatioTracking(): void {
+		const handler = (): void => {
+			this.clearPreviewBackground();
+			this.syncRatioFromMedia();
+		};
+		this.mediaElement.addEventListener('load', handler);
+		this.mediaElement.addEventListener('loadedmetadata', handler);
+	}
+
+	private clearPreviewBackground(): void {
+		if (!this.previewSrc) return;
+
+		this.previewSrc = null;
+		this.mediaElement.classList.remove('mg-media-preview');
+		this.mediaElement.setCssProps({ '--mg-preview-image': 'none' });
+	}
+
+	private syncRatioFromMedia(): void {
+		if (this.ratioKnown) return;
+
+		const media = this.mediaElement as HTMLImageElement &
+			HTMLVideoElement;
+		const width = media.naturalWidth || media.videoWidth;
+		const height = media.naturalHeight || media.videoHeight;
+
+		if (width > 0 && height > 0) {
+			this.applyMediaRatio(width / height, true);
+		}
+	}
+
+	private applyMediaRatio(ratio: number, known: boolean): void {
+		if (!Number.isFinite(ratio) || ratio <= 0) return;
+
+		const changed =
+			this.mediaRatio === null ||
+			Math.abs(this.mediaRatio - ratio) > 0.001;
+
+		this.mediaRatio = ratio;
+		this.ratioKnown = known;
+		this.mediaElement.style.aspectRatio = String(ratio);
+
+		if (changed && this.element.isConnected) {
+			const view = this.element.ownerDocument.defaultView;
+			this.element.dispatchEvent(
+				view
+					? new view.Event('mg-media-resize')
+					: new Event('mg-media-resize')
+			);
+		}
 	}
 
 	private createInfoElement(file: TFile): HTMLDivElement {

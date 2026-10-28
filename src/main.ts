@@ -204,6 +204,9 @@ export default class MediaGallery extends Plugin {
 
 		return {
 			cardHeight: settings.cardHeight,
+			masonryColumns: settings.masonryColumns,
+			masonryGap: settings.masonryGap,
+			masonryMinWidth: settings.masonryMinWidth,
 			showFileNames: settings.showFileNames,
 			videoControls: settings.videoControls,
 			videoMuted: settings.videoMuted,
