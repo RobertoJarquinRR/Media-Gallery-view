@@ -122,22 +122,22 @@ export class OverlayManager {
 	private ensureOverlay(doc: Document): void {
 		if (this.overlay) return;
 
-		this.overlay = doc.createElement('div');
+		this.overlay = createDiv();
 		this.overlay.className = 'mg-overlay is-hidden';
 
-		this.stage = doc.createElement('div');
+		this.stage = createDiv();
 		this.stage.className = 'mg-overlay-stage';
 
-const prev = this.createEdge(doc, 'left', '\u2039', 'Previous');
-const next = this.createEdge(doc, 'right', '\u203A', 'Next');
+const prev = this.createEdge('left', '\u2039', 'Previous');
+const next = this.createEdge('right', '\u203A', 'Next');
 
-		const toolbar = doc.createElement('div');
+		const toolbar = createDiv();
 		toolbar.className = 'mg-overlay-toolbar';
 
-		this.counter = doc.createElement('span');
+		this.counter = createSpan();
 		this.counter.className = 'mg-overlay-counter';
 
-		this.toggleButton = doc.createElement('button');
+		this.toggleButton = createEl('button');
 		this.toggleButton.type = 'button';
 		this.toggleButton.className = 'mg-overlay-toggle';
 		this.toggleButton.textContent = '\u2194';
@@ -148,7 +148,7 @@ const next = this.createEdge(doc, 'right', '\u203A', 'Next');
 			this.toggleArrows();
 		});
 
-		this.openButton = doc.createElement('button');
+		this.openButton = createEl('button');
 		this.openButton.type = 'button';
 		this.openButton.className = 'mg-overlay-open';
 		this.openButton.textContent = '\u2197';
@@ -159,7 +159,7 @@ const next = this.createEdge(doc, 'right', '\u203A', 'Next');
 			this.openCurrent();
 		});
 
-		this.closeButton = doc.createElement('button');
+		this.closeButton = createEl('button');
 		this.closeButton.type = 'button';
 		this.closeButton.className = 'mg-overlay-close';
 		this.closeButton.textContent = '\u2715';
@@ -170,7 +170,7 @@ const next = this.createEdge(doc, 'right', '\u203A', 'Next');
 			this.close();
 		});
 
-		this.zoomToggle = doc.createElement('button');
+		this.zoomToggle = createEl('button');
 		this.zoomToggle.type = 'button';
 		this.zoomToggle.className = 'mg-overlay-toggle';
 		this.zoomToggle.textContent = '\u2315';
@@ -182,10 +182,10 @@ const next = this.createEdge(doc, 'right', '\u203A', 'Next');
 			this.setZoomMode(!this.zoomMode);
 		});
 
-		this.zoomControls = doc.createElement('div');
+		this.zoomControls = createDiv();
 		this.zoomControls.className = 'mg-overlay-zoom-controls is-hidden';
 
-		this.zoomOutButton = doc.createElement('button');
+		this.zoomOutButton = createEl('button');
 		this.zoomOutButton.type = 'button';
 		this.zoomOutButton.className = 'mg-overlay-zoom-button';
 		this.zoomOutButton.textContent = '\u2212';
@@ -197,7 +197,7 @@ const next = this.createEdge(doc, 'right', '\u203A', 'Next');
 			this.syncZoomUi();
 		});
 
-		this.zoomPercentButton = doc.createElement('button');
+		this.zoomPercentButton = createEl('button');
 		this.zoomPercentButton.type = 'button';
 		this.zoomPercentButton.className = 'mg-overlay-zoom-percent';
 		this.zoomPercentButton.textContent = '100%';
@@ -209,7 +209,7 @@ const next = this.createEdge(doc, 'right', '\u203A', 'Next');
 			this.syncZoomUi();
 		});
 
-		this.zoomInButton = doc.createElement('button');
+		this.zoomInButton = createEl('button');
 		this.zoomInButton.type = 'button';
 		this.zoomInButton.className = 'mg-overlay-zoom-button';
 		this.zoomInButton.textContent = '+';
@@ -232,7 +232,7 @@ const next = this.createEdge(doc, 'right', '\u203A', 'Next');
 		toolbar.appendChild(this.toggleButton);
 		toolbar.appendChild(this.closeButton);
 
-		this.thumbsBar = doc.createElement('div');
+		this.thumbsBar = createDiv();
 		this.thumbsBar.className = 'mg-overlay-thumbs';
 		this.thumbsBar.addEventListener('click', (event) => {
 			const target = (event.target as HTMLElement).closest<HTMLElement>(
@@ -287,19 +287,18 @@ const next = this.createEdge(doc, 'right', '\u203A', 'Next');
 		doc.body.appendChild(this.overlay);
 	}
 
-private createEdge(
-		doc: Document,
+	private createEdge(
 		side: 'left' | 'right',
 		glyph: string,
 		label: string
 	): HTMLElement {
-		const edge = doc.createElement('div');
+		const edge = createDiv();
 		edge.className = `mg-overlay-edge mg-overlay-edge-${side}`;
 		edge.setAttribute('role', 'button');
 		edge.setAttribute('tabindex', '0');
 		edge.setAttribute('aria-label', label);
 
-		const arrow = doc.createElement('span');
+		const arrow = createSpan();
 		arrow.className = 'mg-overlay-arrow';
 		arrow.textContent = glyph;
 		edge.appendChild(arrow);
@@ -357,8 +356,7 @@ private createEdge(
 				this.options.renderContent(item, this.stage, this.mediaType) ?? null;
 			this.zoomHandle = this.contentHandle?.zoom ?? null;
 		} else {
-			const doc = this.getDocument();
-			const media = doc.createElement(this.mediaType === 'video' ? 'video' : 'img');
+			const media = createEl(this.mediaType === 'video' ? 'video' : 'img');
 
 			if (this.mediaType === 'video') {
 				Object.entries(this.options.videoAttributes).forEach(([key, value]) => {
@@ -394,11 +392,10 @@ private createEdge(
 	private renderThumbs(): void {
 		if (!this.thumbsBar) return;
 
-		const doc = this.getDocument();
 		this.thumbsBar.empty();
 
 		this.items.forEach((item, itemIndex) => {
-			const thumb = doc.createElement('button');
+			const thumb = createEl('button');
 			thumb.type = 'button';
 			thumb.className = 'mg-overlay-thumb';
 			thumb.dataset.index = String(itemIndex);
@@ -409,18 +406,18 @@ private createEdge(
 			const thumbSource = this.options.thumbSrc?.(item);
 
 			if (thumbSource) {
-				const preview = doc.createElement('img');
+				const preview = createEl('img');
 				preview.setAttribute('loading', 'lazy');
 				preview.setAttribute('src', thumbSource);
 				preview.setAttribute('alt', item.file.basename);
 				thumb.appendChild(preview);
 			} else if (this.mediaType === 'pdf') {
 				thumb.classList.add('is-placeholder');
-				const label = doc.createElement('span');
+				const label = createSpan();
 				label.textContent = 'PDF';
 				thumb.appendChild(label);
 			} else {
-				const preview = doc.createElement(isVideo ? 'video' : 'img');
+				const preview = createEl(isVideo ? 'video' : 'img');
 
 				if (isVideo) {
 					preview.setAttribute('muted', 'true');

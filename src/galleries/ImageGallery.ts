@@ -130,7 +130,7 @@ export class ImageGallery implements GalleryProcessor {
 				},
 			};
 
-			const card = new FileCard(app, cardOptions);
+			const card = new FileCard(cardOptions);
 			this.grid.addCard(card.getElement());
 
 			if (!thumbnails) continue;

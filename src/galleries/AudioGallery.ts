@@ -75,8 +75,7 @@ export class AudioGallery implements GalleryProcessor {
 			onArrowsVisibleChange: options.onOverlayArrowsChange,
 			videoAttributes: {},
 			renderContent: (item, stage) => {
-				const wrapper = stage.ownerDocument.createElement('div');
-				wrapper.className = 'mg-audio-player mg-audio-native';
+				const wrapper = createDiv({ cls: 'mg-audio-player mg-audio-native' });
 				stage.appendChild(wrapper);
 
 				const component = new Component();
@@ -139,7 +138,7 @@ export class AudioGallery implements GalleryProcessor {
 		});
 
 		for (const item of files) {
-			const card = new FileCard(app, {
+			const card = new FileCard({
 				file: item.file,
 				resourcePath: '',
 				mediaTag: 'img',

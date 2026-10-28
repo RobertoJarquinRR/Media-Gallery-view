@@ -24,7 +24,6 @@ export class AudioPlayer {
 	private readonly file: TFile;
 	private readonly previewSrc: string | null;
 	private readonly options: AudioPlayerOptions;
-	private readonly doc: Document;
 
 	private root: HTMLDivElement | null = null;
 	private audio: HTMLAudioElement | null = null;
@@ -52,11 +51,10 @@ export class AudioPlayer {
 		this.options = {
 			autoplay: options?.autoplay ?? false,
 		};
-		this.doc = app.workspace.containerEl.ownerDocument ?? activeDocument;
 	}
 
 	async mount(parent: HTMLElement): Promise<void> {
-		this.root = this.doc.createElement('div');
+		this.root = createDiv();
 		this.root.className = 'mg-audio-player';
 
 		this.buildUI(parent);
@@ -65,27 +63,27 @@ export class AudioPlayer {
 	}
 
 	private buildUI(parent: HTMLElement): void {
-		if (!this.root || !this.doc) return;
+		if (!this.root) return;
 
-		const artworkWrapper = this.doc.createElement('div');
+		const artworkWrapper = createDiv();
 		artworkWrapper.className = 'mg-audio-artwork-wrapper';
-		const artwork = this.doc.createElement('img');
+		const artwork = createEl('img');
 		artwork.className = 'mg-audio-artwork';
 		artwork.alt = '';
 		artwork.src = this.previewSrc ?? DEFAULT_AUDIO_ARTWORK;
 		artworkWrapper.appendChild(artwork);
 
-		const info = this.doc.createElement('div');
+		const info = createDiv();
 		info.className = 'mg-audio-info';
-		const title = this.doc.createElement('div');
+		const title = createDiv();
 		title.className = 'mg-audio-title';
 		title.textContent = this.file.basename;
 		info.appendChild(title);
 
-		const status = this.doc.createElement('div');
+		const status = createDiv();
 		status.className = 'mg-audio-status is-hidden';
 
-		this.audio = this.doc.createElement('audio');
+		this.audio = createEl('audio');
 		this.audio.className = 'mg-audio-element';
 		this.audio.controls = true;
 		this.audio.preload = 'metadata';

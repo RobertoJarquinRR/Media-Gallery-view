@@ -24,7 +24,7 @@ export async function generatePdfThumbnail(
 		const scale = longestSide > targetSize ? targetSize / longestSide : 1;
 		const viewport = page.getViewport({ scale });
 
-		const canvas = activeDocument.createElement('canvas');
+		const canvas = createEl('canvas');
 		canvas.width = Math.max(1, Math.ceil(viewport.width));
 		canvas.height = Math.max(1, Math.ceil(viewport.height));
 

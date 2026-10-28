@@ -114,7 +114,7 @@ export class VideoGallery implements GalleryProcessor {
 				},
 			};
 
-			const card = new FileCard(app, cardOptions);
+			const card = new FileCard(cardOptions);
 			this.grid.addCard(card.getElement());
 		}
 	}

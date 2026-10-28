@@ -1,4 +1,4 @@
-import { App, TFile } from 'obsidian';
+import { TFile } from 'obsidian';
 
 export interface FileCardOptions {
 	file: TFile;
@@ -14,10 +14,6 @@ export interface FileCardOptions {
 	onDoubleClick?: (file: TFile, event: MouseEvent) => void;
 }
 
-function getActiveDocument(app: App): Document {
-	return app.workspace.containerEl?.ownerDocument ?? activeDocument;
-}
-
 export class FileCard {
 	private readonly element: HTMLDivElement;
 	private readonly mediaElement: HTMLElement;
@@ -26,7 +22,7 @@ export class FileCard {
 	private ratioKnown = false;
 	private previewSrc: string | null = null;
 
-	constructor(private readonly app: App, options: FileCardOptions) {
+	constructor(options: FileCardOptions) {
 		this.element = this.createCard(options);
 		this.mediaElement = this.createMediaElement(options);
 		this.infoElement = options.showFileName
@@ -53,8 +49,7 @@ export class FileCard {
 	}
 
 	private createCard(options: FileCardOptions): HTMLDivElement {
-		const doc = getActiveDocument(this.app);
-		const card = doc.createElement('div');
+		const card = createDiv();
 		card.className = 'mg-file-card';
 		card.dataset.path = options.file.path;
 		card.classList.add('mg-clickable');
@@ -65,8 +60,7 @@ export class FileCard {
 	}
 
 	private createMediaElement(options: FileCardOptions): HTMLElement {
-		const doc = getActiveDocument(this.app);
-		const element = doc.createElement(options.mediaTag);
+		const element = createEl(options.mediaTag);
 		element.className = 'mg-media-element';
 
 		Object.entries(options.mediaAttributes).forEach(([key, value]) => {
@@ -163,10 +157,9 @@ export class FileCard {
 	}
 
 	private createInfoElement(file: TFile): HTMLDivElement {
-		const doc = getActiveDocument(this.app);
-		const info = doc.createElement('div');
+		const info = createDiv();
 		info.className = 'mg-info';
-		const name = doc.createElement('p');
+		const name = createEl('p');
 		name.textContent = `${file.basename}.${file.extension}`;
 		info.appendChild(name);
 		return info;

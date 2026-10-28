@@ -33,7 +33,7 @@ export class GalleryGrid {
 		layoutMode: LayoutMode = 'masonry',
 		masonry: MasonryOptions = {}
 	) {
-		this.element = this.doc.createElement('div');
+		this.element = createDiv();
 		this.element.className = className;
 		this.isMasonry = layoutMode === 'masonry';
 		this.masonryColumns = masonry.columns ?? DEFAULT_COLUMNS;
@@ -73,7 +73,7 @@ export class GalleryGrid {
 	showEmptyMessage(message: string): void {
 		this.resetMasonry();
 		this.element.empty();
-		const p = this.doc.createElement('p');
+		const p = createEl('p');
 		p.textContent = message;
 		this.element.appendChild(p);
 	}

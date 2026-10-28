@@ -121,7 +121,7 @@ export class PdfGallery implements GalleryProcessor {
 		this.observer = observer;
 
 		for (const item of files) {
-			const card = new FileCard(app, {
+			const card = new FileCard({
 				file: item.file,
 				resourcePath: '',
 				mediaTag: 'img',

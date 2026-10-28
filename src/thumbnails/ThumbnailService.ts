@@ -385,7 +385,7 @@ export class ThumbnailService implements ThumbnailResolver {
 
 		const size = await new Promise<{ width: number; height: number } | null>(
 			(resolve) => {
-				const image = activeDocument.createElement('img');
+				const image = createEl('img');
 				image.onload = () => {
 					resolve(
 						image.naturalWidth > 0 && image.naturalHeight > 0

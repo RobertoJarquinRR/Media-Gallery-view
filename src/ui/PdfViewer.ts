@@ -30,7 +30,6 @@ export class PdfViewer implements OverlayZoomHandle {
 	private readonly app: App;
 	private readonly file: TFile;
 	private readonly previewSrc: string | null;
-	private readonly doc: Document;
 	private readonly onScrollBound: () => void;
 	private readonly onTouchStartBound: (event: TouchEvent) => void;
 	private readonly onTouchMoveBound: (event: TouchEvent) => void;
@@ -61,7 +60,6 @@ export class PdfViewer implements OverlayZoomHandle {
 		this.app = app;
 		this.file = file;
 		this.previewSrc = previewSrc ?? null;
-		this.doc = app.workspace.containerEl.ownerDocument ?? activeDocument;
 		this.onScrollBound = () => this.scheduleCurrentPageUpdate();
 		this.onTouchStartBound = (event) => this.handleTouchStart(event);
 		this.onTouchMoveBound = (event) => this.handleTouchMove(event);
@@ -69,16 +67,16 @@ export class PdfViewer implements OverlayZoomHandle {
 	}
 
 	async mount(parent: HTMLElement): Promise<void> {
-		this.root = this.doc.createElement('div');
+		this.root = createDiv();
 		this.root.className = 'mg-pdf-viewer';
 
-		const toolbar = this.doc.createElement('div');
+		const toolbar = createDiv();
 		toolbar.className = 'mg-pdf-toolbar';
 
 		const previous = this.createPageButton('‹', 'Previous page', -1);
 		const next = this.createPageButton('›', 'Next page', 1);
 
-		this.label = this.doc.createElement('span');
+		this.label = createSpan();
 		this.label.className = 'mg-pdf-page-label';
 		this.label.textContent = '1 / …';
 
@@ -86,7 +84,7 @@ export class PdfViewer implements OverlayZoomHandle {
 		toolbar.appendChild(this.label);
 		toolbar.appendChild(next);
 
-		this.scroll = this.doc.createElement('div');
+		this.scroll = createDiv();
 		this.scroll.className = 'mg-pdf-scroll';
 		this.scroll.addEventListener('scroll', this.onScrollBound, { passive: true });
 		this.scroll.addEventListener('touchstart', this.onTouchStartBound, {
@@ -98,7 +96,7 @@ export class PdfViewer implements OverlayZoomHandle {
 		this.scroll.addEventListener('touchend', this.onTouchEndBound);
 		this.scroll.addEventListener('touchcancel', this.onTouchEndBound);
 
-		this.loading = this.doc.createElement('div');
+		this.loading = createDiv();
 		this.loading.className = 'mg-pdf-loading';
 		this.loading.textContent = 'Loading PDF…';
 		this.scroll.appendChild(this.loading);
@@ -381,7 +379,7 @@ export class PdfViewer implements OverlayZoomHandle {
 		label: string,
 		direction: number
 	): HTMLButtonElement {
-		const button = this.doc.createElement('button');
+		const button = createEl('button');
 		button.type = 'button';
 		button.className = 'mg-pdf-page-button';
 		button.textContent = glyph;
@@ -412,7 +410,7 @@ export class PdfViewer implements OverlayZoomHandle {
 		first.cleanup();
 
 		for (let num = 1; num <= pdf.numPages; num++) {
-			const wrapper = this.doc.createElement('div');
+			const wrapper = createDiv();
 			wrapper.className = 'mg-pdf-page';
 			wrapper.dataset.page = String(num);
 			wrapper.setCssProps({ '--mg-pdf-aspect': String(aspect) });
@@ -420,7 +418,7 @@ export class PdfViewer implements OverlayZoomHandle {
 
 			let preview: HTMLImageElement | null = null;
 			if (num === 1 && this.previewSrc) {
-				preview = this.doc.createElement('img');
+				preview = createEl('img');
 				preview.className = 'mg-pdf-page-preview';
 				preview.src = this.previewSrc;
 				preview.alt = '';
@@ -513,7 +511,7 @@ export class PdfViewer implements OverlayZoomHandle {
 			const scale = (width / base.width) * dpr;
 			const viewport = page.getViewport({ scale });
 
-			const canvas = this.doc.createElement('canvas');
+			const canvas = createEl('canvas');
 			canvas.className = 'mg-pdf-page-canvas';
 			canvas.width = Math.max(1, Math.floor(viewport.width));
 			canvas.height = Math.max(1, Math.floor(viewport.height));
@@ -646,7 +644,7 @@ export class PdfViewer implements OverlayZoomHandle {
 
 		this.root.empty();
 		this.loading = null;
-		const message = this.doc.createElement('p');
+		const message = createEl('p');
 		message.className = 'mg-pdf-error';
 		message.textContent = `Could not open ${this.file.basename}.pdf`;
 		this.root.appendChild(message);
