@@ -26,6 +26,9 @@ export interface MediaGallerySettings {
 	sortOrder: SortOrder;
 	layoutMode: LayoutMode;
 	cardHeight: number;
+	masonryColumns: number;
+	masonryGap: number;
+	masonryMinWidth: number;
 	showFileNames: boolean;
 	videoControls: boolean;
 	videoMuted: boolean;
@@ -58,6 +61,9 @@ export const DEFAULT_SETTINGS: MediaGallerySettings = {
 	sortOrder: 'mtime-desc',
 	layoutMode: 'masonry',
 	cardHeight: 290,
+	masonryColumns: 0,
+	masonryGap: 5,
+	masonryMinWidth: 220,
 	showFileNames: true,
 	videoControls: true,
 	videoMuted: true,
@@ -102,6 +108,25 @@ export class SettingsManager {
 		) {
 			this.settings.layoutMode = 'masonry';
 		}
+
+		this.settings.masonryColumns = clampNumber(
+			this.settings.masonryColumns,
+			0,
+			6,
+			DEFAULT_SETTINGS.masonryColumns
+		);
+		this.settings.masonryGap = clampNumber(
+			this.settings.masonryGap,
+			0,
+			40,
+			DEFAULT_SETTINGS.masonryGap
+		);
+		this.settings.masonryMinWidth = clampNumber(
+			this.settings.masonryMinWidth,
+			100,
+			600,
+			DEFAULT_SETTINGS.masonryMinWidth
+		);
 
 		this.settings.enableGalleryView = Boolean(this.settings.enableGalleryView);
 
@@ -343,6 +368,44 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 							},
 						},
 						{
+							name: translate(lang, 'masonryColumns'),
+							desc: translate(lang, 'masonryColumnsDesc'),
+							control: {
+								type: 'dropdown',
+								key: 'masonryColumns',
+								options: {
+									'0': translate(lang, 'masonryColumnsAuto'),
+									'2': translate(lang, 'masonryColumnsCount', { count: 2 }),
+									'3': translate(lang, 'masonryColumnsCount', { count: 3 }),
+									'4': translate(lang, 'masonryColumnsCount', { count: 4 }),
+									'5': translate(lang, 'masonryColumnsCount', { count: 5 }),
+									'6': translate(lang, 'masonryColumnsCount', { count: 6 }),
+								},
+							},
+						},
+						{
+							name: translate(lang, 'masonryMinWidth'),
+							desc: translate(lang, 'masonryMinWidthDesc'),
+							control: {
+								type: 'slider',
+								key: 'masonryMinWidth',
+								min: 120,
+								max: 400,
+								step: 10,
+							},
+						},
+						{
+							name: translate(lang, 'masonryGap'),
+							desc: translate(lang, 'masonryGapDesc'),
+							control: {
+								type: 'slider',
+								key: 'masonryGap',
+								min: 0,
+								max: 24,
+								step: 1,
+							},
+						},
+						{
 							name: translate(lang, 'showFileNames'),
 							desc: translate(lang, 'showFileNamesDesc'),
 							control: { type: 'toggle', key: 'showFileNames' },
@@ -479,6 +542,9 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 	getControlValue(key: string): unknown {
 		const settings = this.manager.getSettings() as unknown as Record<string, unknown>;
 		const value = settings[key];
+		if (key === 'masonryColumns') {
+			return typeof value === 'number' ? String(value) : '0';
+		}
 		return Array.isArray(value) ? value.join(', ') : value;
 	}
 
@@ -496,13 +562,29 @@ export class MediaGallerySettingTab extends PluginSettingTab {
 			return;
 		}
 
-		const raw = typeof value === 'string' ? value : '';
+		const raw =
+			typeof value === 'string'
+				? value
+				: typeof value === 'number'
+					? String(value)
+					: '';
 		let next: unknown = value;
 
 		if (EXTENSION_KEYS.has(key)) {
 			next = parseExtensions(raw);
 		} else if (key === 'thumbnailFolder') {
 			next = raw.trim();
+		} else if (key === 'masonryColumns') {
+			next = clampNumber(raw, 0, 6, DEFAULT_SETTINGS.masonryColumns);
+		} else if (key === 'masonryGap') {
+			next = clampNumber(raw, 0, 40, DEFAULT_SETTINGS.masonryGap);
+		} else if (key === 'masonryMinWidth') {
+			next = clampNumber(
+				raw,
+				100,
+				600,
+				DEFAULT_SETTINGS.masonryMinWidth
+			);
 		}
 
 		this.manager.updateSettings({ [key]: next });
@@ -547,6 +629,17 @@ function normalizeLibraries(value: unknown): GalleryLibrary[] {
 
 function isGalleryType(value: unknown): value is GalleryType {
 	return value === 'image' || value === 'pdf' || value === 'video' || value === 'audio';
+}
+
+function clampNumber(
+	value: unknown,
+	min: number,
+	max: number,
+	fallback: number
+): number {
+	const parsed = typeof value === 'number' ? value : Number(value);
+	if (!Number.isFinite(parsed)) return fallback;
+	return Math.min(max, Math.max(min, Math.round(parsed)));
 }
 
 function createId(): string {

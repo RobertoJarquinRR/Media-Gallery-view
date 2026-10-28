@@ -57,6 +57,9 @@ export interface ThumbnailResolver {
 
 export interface GalleryRenderOptions {
 	cardHeight: number;
+	masonryColumns: number;
+	masonryGap: number;
+	masonryMinWidth: number;
 	showFileNames: boolean;
 	videoControls: boolean;
 	videoMuted: boolean;

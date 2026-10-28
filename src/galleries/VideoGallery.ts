@@ -34,7 +34,12 @@ export class VideoGallery implements GalleryProcessor {
 			'mg-gallery-grid',
 			container.ownerDocument,
 			options.cardHeight,
-			options.layoutMode
+			options.layoutMode,
+			{
+				columns: options.masonryColumns,
+				gap: options.masonryGap,
+				minWidth: options.masonryMinWidth,
+			}
 		);
 
 		container.empty();
